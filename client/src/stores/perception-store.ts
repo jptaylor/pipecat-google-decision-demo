@@ -21,6 +21,8 @@ interface PerceptionState {
   phase: Phase;
   /** The clip being played, if any. */
   activeClipId: string | null;
+  /** The clip played last, which Play plays again. */
+  lastClipId: string | null;
   /** Where the turn on show came from: a clip's id, null for the microphone, undefined before any turn. */
   turnClipId: string | null | undefined;
   /** What the model made of the turn on show, once it has answered. */
@@ -49,7 +51,7 @@ function apply(
         },
       };
     case "clip-started":
-      return { activeClipId: message.clipId };
+      return { activeClipId: message.clipId, lastClipId: message.clipId };
     case "clip-finished":
       return state.activeClipId === message.clipId
         ? { activeClipId: null }
@@ -87,6 +89,7 @@ export const usePerceptionStore = create<PerceptionState>()((set) => ({
   session: null,
   phase: "idle",
   activeClipId: null,
+  lastClipId: null,
   turnClipId: undefined,
   reading: null,
   hasFailed: false,

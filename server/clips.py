@@ -33,6 +33,7 @@ class Clip:
     Parameters:
         id: Its name in messages to and from the page.
         mood: How it was said, such as ``"sarcastic"``.
+        sincerity: Whether it was meant: ``"sincere"`` or ``"sarcastic"``.
         voice: Who says it.
         text: Its words.
         duration: Its length in seconds.
@@ -41,6 +42,7 @@ class Clip:
 
     id: str
     mood: str
+    sincerity: str
     voice: str
     text: str
     duration: float
@@ -51,6 +53,7 @@ class Clip:
         return {
             "id": self.id,
             "mood": self.mood,
+            "sincerity": self.sincerity,
             "voice": self.voice,
             "text": self.text,
             "duration": self.duration,
@@ -78,6 +81,7 @@ def load_clips(folder: Path = CLIPS_DIR) -> dict[str, Clip]:
         clips[entry["id"]] = Clip(
             id=entry["id"],
             mood=entry["mood"],
+            sincerity=entry["sincerity"],
             voice=entry["voice"],
             text=entry["text"],
             duration=len(audio) / 2 / SAMPLE_RATE,

@@ -88,7 +88,15 @@ async def running(*processors: FrameProcessor) -> AsyncIterator[Running]:
 def make_clip(clip_id: str = "happy.a", secs: float = 0.1, sample: int = 1000) -> Clip:
     """A clip of one repeated sample, so its audio is told apart from silence and other clips."""
     audio = sample.to_bytes(2, "little", signed=True) * int(SAMPLE_RATE * secs)
-    return Clip(id=clip_id, mood="happy", voice="Sarah", text="Oh, lovely.", duration=secs, audio=audio)
+    return Clip(
+        id=clip_id,
+        mood="happy",
+        sincerity="sincere",
+        voice="Sarah",
+        text="Oh, lovely.",
+        duration=secs,
+        audio=audio,
+    )
 
 
 def write_wav(path: Path, audio: bytes, sample_rate: int = SAMPLE_RATE):

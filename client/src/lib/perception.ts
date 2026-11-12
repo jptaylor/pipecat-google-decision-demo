@@ -66,10 +66,3 @@ export function figureFor(measure: Measure, value: number): Figure {
 export function percent(confidence: number): string {
   return `${Math.round(confidence * 100)}${PERCENT}`;
 }
-
-/** How long a read took: milliseconds under a second, seconds from there. */
-export function latencyText(readMs: number): string {
-  return readMs < 1000
-    ? `${Math.round(readMs)} ms`
-    : `${(readMs / 1000).toFixed(1)} s`;
-}

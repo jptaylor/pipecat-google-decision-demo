@@ -3,6 +3,8 @@
 export interface ClipInfo {
   id: string;
   mood: string;
+  /** Whether it was meant: "sincere" or "sarcastic". */
+  sincerity: string;
   voice: string;
   text: string;
   duration: number;

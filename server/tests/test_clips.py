@@ -21,7 +21,7 @@ def test_load_clips_keeps_the_manifest_order_and_leaves_out_bad_files(tmp_path):
     good = make_clip("sad.a")
     write_wav(tmp_path / "sad.a.wav", good.audio)
     write_wav(tmp_path / "happy.a.wav", good.audio, sample_rate=8000)
-    entry = {"mood": "sad", "voice": "Sarah", "text": "Oh.", "duration": 0.1}
+    entry = {"mood": "sad", "sincerity": "sincere", "voice": "Sarah", "text": "Oh.", "duration": 0.1}
     manifest = [
         {"id": "happy.a", "file": "happy.a.wav", **entry},
         {"id": "gone.a", "file": "gone.a.wav", **entry},
@@ -36,7 +36,7 @@ def test_load_clips_keeps_the_manifest_order_and_leaves_out_bad_files(tmp_path):
     assert clips["sad.a"].describe() == {
         "id": "sad.a",
         "duration": 0.1,
-        **{k: entry[k] for k in ("mood", "voice", "text")},
+        **{k: entry[k] for k in ("mood", "sincerity", "voice", "text")},
     }
 
 

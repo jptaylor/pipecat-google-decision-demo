@@ -2,6 +2,7 @@
   {
     "id": "neutral.eleven-v4.a",
     "mood": "neutral",
+    "sincerity": "sincere",
     "voice": "Sarah",
     "text": "Sure, it's going to the office address, not my home, and someone will be there between nine and five on weekdays.",
     "duration": 7.12,
@@ -10,6 +11,7 @@
   {
     "id": "happy.eleven-v4.a",
     "mood": "happy",
+    "sincerity": "sincere",
     "voice": "Sarah",
     "text": "Oh, that's fantastic, I honestly didn't expect it to go through this quickly, thank you so much for sorting that out!",
     "duration": 7.44,
@@ -18,6 +20,7 @@
   {
     "id": "sad.eleven-v4.a",
     "mood": "sad",
+    "sincerity": "sincere",
     "voice": "Sarah",
     "text": "Oh, okay, I was really hoping you could get those back, they were the only copies I had from that trip.",
     "duration": 7.44,
@@ -26,6 +29,7 @@
   {
     "id": "frustrated.eleven-v4.a",
     "mood": "frustrated",
+    "sincerity": "sincere",
     "voice": "Sarah",
     "text": "Yes, I've restarted it three times already, I've been on the phone for forty minutes and nobody has actually fixed anything.",
     "duration": 7.36,
@@ -34,6 +38,7 @@
   {
     "id": "sarcastic.eleven-v4.a",
     "mood": "sarcastic",
+    "sincerity": "sarcastic",
     "voice": "Sarah",
     "text": "Oh, wonderful, a whole day at home waiting, that's exactly the fast service I was hoping for.",
     "duration": 8.4,
@@ -42,6 +47,7 @@
   {
     "id": "laughing.eleven-v4.a",
     "mood": "laughing",
+    "sincerity": "sincere",
     "voice": "Sarah",
     "text": "Oh no, that's hilarious, so the cat ordered forty tins of tuna all by itself!",
     "duration": 9.84,
@@ -50,6 +56,7 @@
   {
     "id": "neutral.eleven-v4.b",
     "mood": "neutral",
+    "sincerity": "sincere",
     "voice": "George",
     "text": "Sure, it's going to the office address, not my home, and someone will be there between nine and five on weekdays.",
     "duration": 6.96,
@@ -58,6 +65,7 @@
   {
     "id": "happy.eleven-v4.b",
     "mood": "happy",
+    "sincerity": "sincere",
     "voice": "George",
     "text": "Oh, that's fantastic, I honestly didn't expect it to go through this quickly, thank you so much for sorting that out!",
     "duration": 7.2,
@@ -66,6 +74,7 @@
   {
     "id": "sad.eleven-v4.b",
     "mood": "sad",
+    "sincerity": "sincere",
     "voice": "George",
     "text": "Oh, okay, I was really hoping you could get those back, they were the only copies I had from that trip.",
     "duration": 7.04,
@@ -74,6 +83,7 @@
   {
     "id": "frustrated.eleven-v4.b",
     "mood": "frustrated",
+    "sincerity": "sincere",
     "voice": "George",
     "text": "Yes, I've restarted it three times already, I've been on the phone for forty minutes and nobody has actually fixed anything.",
     "duration": 6.96,
@@ -82,6 +92,7 @@
   {
     "id": "sarcastic.eleven-v4.b",
     "mood": "sarcastic",
+    "sincerity": "sarcastic",
     "voice": "George",
     "text": "Oh, wonderful, a whole day at home waiting, that's exactly the fast service I was hoping for.",
     "duration": 6.88,
@@ -90,6 +101,7 @@
   {
     "id": "laughing.eleven-v4.b",
     "mood": "laughing",
+    "sincerity": "sincere",
     "voice": "George",
     "text": "Oh no, that's hilarious, so the cat ordered forty tins of tuna all by itself!",
     "duration": 8.64,

@@ -14,14 +14,14 @@ interface MeasureTileProps {
 export function MeasureTile({ measure, value }: MeasureTileProps) {
   const figure = value === undefined ? null : figureFor(measure, value);
   return (
-    <article className="flex min-w-0 flex-col gap-3">
+    <article className="flex min-w-0 flex-col gap-1.5">
       <span className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
         {measure.title}
       </span>
       <span className="flex items-baseline gap-2">
         <span
           className={cn(
-            "font-display text-5xl leading-none font-black tracking-tight sm:text-7xl",
+            "font-display text-figure leading-none font-black tracking-tight",
             !figure && "text-muted-foreground/40",
           )}
         >

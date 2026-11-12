@@ -3,7 +3,7 @@
     python prepare_clips.py /path/to/moods
 
 The folder holds the takes' WAVs and a ``manifest.json`` listing each one: its ``id`` (``<mood>.<engine>.<take>``),
-``path``, ``voice`` and ``text``. Keeps the takes named in ``TAKES`` for every mood, and writes them beside a
+``path``, ``voice``, ``text`` and ``delivery`` (``"sarcastic"`` for a take said sarcastically). Keeps the takes named in ``TAKES`` for every mood, and writes them beside a
 ``manifest.json`` of the fields the demo shows, in the order the bot plays them: every mood in the first take's
 voice, then every mood in the second's. The bot plays 16 kHz 16-bit mono WAVs as they are, so a take in any other
 format stops the run. Standard library only.
@@ -53,6 +53,7 @@ def prepare(source: Path, target: Path) -> list[dict[str, object]]:
                 {
                     "id": take["id"],
                     "mood": mood,
+                    "sincerity": "sarcastic" if take.get("delivery") == "sarcastic" else "sincere",
                     "voice": take["voice"],
                     "text": take["text"],
                     "duration": round(duration, 2),

@@ -20,6 +20,27 @@
   --color-tone-neutral: var(--tone-neutral);
   --color-tone-sad: var(--tone-sad);
   --color-tone-frustrated: var(--tone-frustrated);
+  /*
+   * The page is one screen and never scrolls, so what is on it is sized in
+   * units of the screen's height (--frame-unit, set below), and capped by
+   * its width where a long word or number would run out of room.
+   */
+  --text-headline: min(calc(var(--frame-unit) * 8), 13vw);
+  --text-figure: min(calc(var(--frame-unit) * 7), 11vw);
+  --text-latency: min(calc(var(--frame-unit) * 9), 14vw);
+  --spacing-pill: min(calc(var(--frame-unit) * 44), 80vw);
+  --spacing-control: max(2.75rem, calc(var(--frame-unit) * 7));
+  --spacing-wave: calc(var(--frame-unit) * 7);
+  --spacing-frame: calc(var(--frame-unit) * 3);
+  --spacing-frame-sm: calc(var(--frame-unit) * 1.5);
+  /* The panels while a turn is heard, and while the model reads it. */
+  --animate-hearing: working 1.6s ease-in-out infinite;
+  --animate-assessing: working 0.6s ease-in-out infinite;
+  @keyframes working {
+    50% {
+      opacity: 0.45;
+    }
+  }
   /* Dot meters: a lit dot and an unlit one. */
   --color-meter: var(--meter);
   --color-meter-track: var(--meter-track);
@@ -80,6 +101,11 @@
 }
 
 :root {
+  /* Side by side, the page is about 92 units tall; stacked on a narrow screen, about 170. */
+  --frame-unit: 0.55dvh;
+  @media (width >= 64rem) {
+    --frame-unit: 1dvh;
+  }
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);

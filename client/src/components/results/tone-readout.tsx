@@ -23,28 +23,28 @@ interface ToneReadoutProps {
 export function ToneReadout({ tones }: ToneReadoutProps) {
   const likeliest = tones?.[0]?.label;
   return (
-    <article className="flex flex-col gap-8">
-      <div className="flex flex-col gap-2">
+    <article className="flex flex-col gap-frame-sm">
+      <div className="flex flex-col gap-1">
         <span className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
           {TITLE}
         </span>
         <span
           className={cn(
-            "font-display text-5xl leading-none font-black tracking-tight uppercase sm:text-7xl 2xl:text-8xl",
+            "font-display text-headline leading-none font-black tracking-tight uppercase",
             !likeliest && "text-muted-foreground/40",
           )}
         >
           {likeliest ?? EMPTY}
         </span>
       </div>
-      <ul className="grid grid-cols-2 gap-x-6 gap-y-5 sm:gap-x-10">
+      <ul className="grid grid-cols-2 gap-x-6 gap-y-frame-sm sm:gap-x-10">
         {TONES.map((tone) => {
           const confidence = tones?.find(
             (candidate) => candidate.label === tone,
           )?.confidence;
           const value = confidence === undefined ? null : percent(confidence);
           return (
-            <li key={tone} className="flex min-w-0 flex-col gap-2">
+            <li key={tone} className="flex min-w-0 flex-col gap-1">
               <span className="flex items-baseline justify-between gap-3">
                 <span className="text-sm font-medium capitalize">{tone}</span>
                 <span
