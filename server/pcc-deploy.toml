@@ -1,0 +1,9 @@
+agent_name = "google-perception-demo"
+# Holds GOOGLE_API_KEY (and SESSION_MAX_SECS, to change the session limit).
+secret_set = "google-perception-demo-secrets"
+agent_profile = "agent-1x"
+
+[scaling]
+    # Instances kept warm, so that many visitors can start at once with no cold start.
+    # Warm instances are billed whether or not anyone is using them.
+    min_agents = 15

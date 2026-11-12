@@ -1,0 +1,10 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# The premade clips are synthetic audio, kept out of git: prepare_clips.py copies them into server/clips/.
+server/clips/*.wav
