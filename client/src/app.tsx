@@ -28,9 +28,13 @@ export function App() {
         <div className="relative z-10">
           <AppHeader />
         </div>
-        <main className="grid min-h-0 flex-1 items-center gap-frame lg:grid-cols-2 lg:gap-16">
-          <div className="flex flex-col items-center gap-frame lg:gap-frame-lg">
-            <VoicePill className="size-pill" />
+        <main className="flex min-h-0 flex-1 flex-col gap-frame lg:grid lg:grid-cols-2 lg:items-center lg:gap-16">
+          <div className="flex min-h-0 flex-1 flex-col items-center gap-frame lg:gap-frame-lg">
+            {/* Stacked, the pill takes the height the readings leave over, as a
+                square no wider than the page; side by side, it has a size of its own. */}
+            <div className="[container-type:size] grid min-h-pill w-full flex-1 place-items-center lg:[container-type:normal] lg:min-h-0 lg:w-auto lg:flex-none">
+              <VoicePill className="size-[min(100cqh,100cqw,var(--spacing-pill-max))] lg:size-pill" />
+            </div>
             {/* Above the pill's canvas, which reaches down over them. */}
             <div className="relative z-10">
               <SessionControls />

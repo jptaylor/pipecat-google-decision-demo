@@ -32,8 +32,9 @@ export function AppHeader() {
     <header className="flex items-center justify-between gap-x-6 text-xs font-medium tracking-widest whitespace-nowrap text-muted-foreground uppercase">
       <h1 className="flex items-center gap-3">
         <PipecatMark className="size-5 text-foreground" />
-        <span className="text-foreground">{TITLE}</span>
-        <span className="hidden sm:inline">{SUBTITLE}</span>
+        {/* Stacked, the mark stands for the name, which is still read out. */}
+        <span className="sr-only text-foreground lg:not-sr-only">{TITLE}</span>
+        <span className="sr-only lg:not-sr-only">{SUBTITLE}</span>
       </h1>
       <div className="flex items-center gap-x-6">
         <p
@@ -54,13 +55,13 @@ export function AppHeader() {
           {STATUS_TEXT[status]}
         </p>
         {readMs === undefined ? null : (
-          <span className="hidden md:inline">
+          <span className="hidden sm:inline">
             {LATENCY}{" "}
             <span className="text-foreground">{Math.round(readMs)}</span>{" "}
             {MILLISECONDS}
           </span>
         )}
-        {model ? <span className="hidden md:inline">{model}</span> : null}
+        {model ? <span className="hidden sm:inline">{model}</span> : null}
       </div>
     </header>
   );

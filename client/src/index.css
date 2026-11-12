@@ -31,6 +31,8 @@
   --text-gauge: min(calc(var(--frame-unit) * 4.6), 9vw);
   --text-panel: calc(var(--frame-unit) * 3.2);
   --spacing-pill: min(calc(var(--frame-unit) * var(--pill-units)), 80vw);
+  /* Stacked, the pill grows into the height left over, up to this. */
+  --spacing-pill-max: calc(var(--frame-unit) * 84);
   --spacing-gauge: min(calc(var(--frame-unit) * 15), 20vw);
   --spacing-dotgrid: calc(var(--frame-unit) * 14);
   --spacing-control: max(2.75rem, calc(var(--frame-unit) * 7));
@@ -155,8 +157,8 @@
 :root {
   /* Side by side, the page is about 90 units tall; stacked on a narrow screen, about 195. */
   --frame-unit: 0.5dvh;
-  /* How many units across the pill's place is: less when it shares the height with the readings. */
-  --pill-units: 29;
+  /* How many units across the pill's place is: stacked, where it shares the height with the readings, this is the least it gets. */
+  --pill-units: 20;
   @media (width >= 64rem) {
     --frame-unit: 1dvh;
     --pill-units: 50;

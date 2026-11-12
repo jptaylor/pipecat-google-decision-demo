@@ -58,7 +58,8 @@ export function TonePanels({ tones }: TonePanelsProps) {
           <li
             key={tone}
             className={cn(
-              "flex min-w-0 flex-col gap-3 rounded-2xl border p-3 transition-colors duration-500 sm:gap-4 sm:p-4",
+              // On a phone the figure and the dots sit side by side, which leaves the pill more of the height.
+              "flex min-w-0 items-center justify-between gap-3 rounded-2xl border p-3 transition-colors duration-500 sm:flex-col sm:items-stretch sm:justify-start sm:gap-4 sm:p-4",
               isTop ? TONE_STYLES[tone].top : "border-border bg-card/40",
             )}
           >
@@ -82,7 +83,7 @@ export function TonePanels({ tones }: TonePanelsProps) {
               aria-valuemax={100}
               aria-valuenow={Math.round((confidence ?? 0) * 100)}
               aria-valuetext={value ?? undefined}
-              className="grid w-full max-w-dotgrid grid-cols-8 gap-1 sm:gap-1.5"
+              className="grid w-full max-w-dotgrid shrink-0 grid-cols-8 gap-1 sm:gap-1.5"
             >
               {GRID.map((order) => (
                 <span
