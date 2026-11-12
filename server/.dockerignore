@@ -10,5 +10,3 @@ __pycache__
 .python-version
 tests
 pcc-deploy.toml
-Dockerfile
-.dockerignore

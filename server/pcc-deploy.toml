@@ -3,6 +3,10 @@ agent_name = "google-perception-demo"
 secret_set = "google-perception-demo-secrets"
 agent_profile = "agent-1x"
 
+# Krisp's voice isolation on the microphone (bot.py's microphone_filter). "tel" is its 16 kHz model.
+[krisp_viva]
+    audio_filter = "tel"
+
 [scaling]
     # Instances kept warm, so that many visitors can start at once with no cold start.
     # Warm instances are billed whether or not anyone is using them.

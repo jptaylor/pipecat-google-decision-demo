@@ -26,6 +26,7 @@ import os
 
 from dotenv import load_dotenv
 from loguru import logger
+from pipecat.audio.filters.base_audio_filter import BaseAudioFilter
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.frames.frames import VADUserStartedSpeakingFrame
@@ -54,10 +55,29 @@ CLIP_SILENCE_SECS = VAD_STOP_SECS + 0.5
 #: The longest a session lasts, in seconds. The demo is public and every read is a paid request.
 SESSION_MAX_SECS = float(os.getenv("SESSION_MAX_SECS", "600"))
 
+
+def microphone_filter() -> BaseAudioFilter | None:
+    """Krisp's voice isolation for the microphone, on Pipecat Cloud only.
+
+    Its SDK and model come with Pipecat Cloud's image, and the deployment turns it on (``krisp_viva`` in
+    ``pcc-deploy.toml``). Pipecat's development runner sets ``ENV=local``, and there the microphone is heard
+    as it is. A clip enters after the transport's input, so it is never filtered.
+    """
+    if os.environ.get("ENV") == "local":
+        return None
+    from pipecat.audio.filters.krisp_viva_filter import KrispVivaFilter
+
+    return KrispVivaFilter()
+
+
 # Lambdas defer building the parameters until the runner has picked the transport.
 transport_params = {
-    "daily": lambda: DailyParams(audio_in_enabled=True, audio_out_enabled=True),
-    "webrtc": lambda: TransportParams(audio_in_enabled=True, audio_out_enabled=True),
+    "daily": lambda: DailyParams(
+        audio_in_enabled=True, audio_in_filter=microphone_filter(), audio_out_enabled=True
+    ),
+    "webrtc": lambda: TransportParams(
+        audio_in_enabled=True, audio_in_filter=microphone_filter(), audio_out_enabled=True
+    ),
 }
 
 

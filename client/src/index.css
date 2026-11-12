@@ -1,14 +1,15 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/jetbrains-mono";
 @import "@fontsource-variable/doto/rond.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: "Geist Variable", sans-serif;
+  /* Everything that isn't a headline or a big number. */
+  --font-sans: "JetBrains Mono Variable", ui-monospace, monospace;
   /* Headlines and big numbers: Doto, with fully round dots. */
   --font-display: "Doto Variable", ui-monospace, monospace;
   --font-display--font-variation-settings: "ROND" 100;

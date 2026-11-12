@@ -54,6 +54,10 @@ cd client && cp env.example .env.local && npm install && npm run dev
 Locally the two talk over SmallWebRTC, which needs no Daily account: `VITE_TRANSPORT=smallwebrtc` in
 `.env.local`, and Vite proxies `/api` to the bot's runner on port 7860 (`BOT_URL`).
 
+To run the local page against the bot deployed on Pipecat Cloud instead, put `PIPECAT_CLOUD_AGENT_NAME` and
+`PIPECAT_CLOUD_PUBLIC_KEY` in `.env.local` and leave `VITE_TRANSPORT` out: the dev server then answers
+`/api/start` itself, with the same function production runs.
+
 ## Checks
 
 ```bash
@@ -72,8 +76,8 @@ pipecat cloud secrets set google-perception-demo-secrets GOOGLE_API_KEY=...
 pipecat cloud deploy
 ```
 
-`pcc-deploy.toml` names the agent `google-perception-demo` and keeps 15 instances warm (`min_agents`), which
-are billed whether or not anyone is using them. A session ends when the visitor leaves, after five minutes
+`pcc-deploy.toml` names the agent `google-perception-demo`, turns on Krisp's voice isolation for the microphone
+and keeps 15 instances warm (`min_agents`), which are billed whether or not anyone is using them. A session ends when the visitor leaves, after five minutes
 without speech, or after `SESSION_MAX_SECS` (600 by default), whichever comes first.
 
 **The page**, to a static host that can run one function. In production the page connects over Daily
