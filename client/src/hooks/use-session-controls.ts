@@ -5,31 +5,23 @@ import {
 } from "@pipecat-ai/client-react";
 
 import { unlockBotAudio } from "@/components/pipecat/bot-audio";
+import { cancelAdvance } from "@/lib/clip-cycle";
 import { ensureSession } from "@/lib/pipecat-client";
 import { usePerceptionStore } from "@/stores/perception-store";
-import type { ClipInfo } from "@/types/perception";
 
 const START_FAILED = "Couldn't connect. Try again.";
 
-/** A clip at random, and not the one played last when there is another. */
-function randomClip(
-  clips: ClipInfo[],
-  lastClipId: string | null,
-): string | undefined {
-  const others = clips.filter((clip) => clip.id !== lastClipId);
-  const pool = others.length > 0 ? others : clips;
-  return pool[Math.floor(Math.random() * pool.length)]?.id;
-}
-
 interface SessionControls {
-  /** Stops the clip playing, or plays one at random. */
-  toggleClip: () => void;
-  /** Plays another clip at random, in place of any clip playing. */
+  /** Starts running through the clips, one after another, or stops. */
+  toggleClips: () => void;
+  /** Plays the next clip now, in place of any clip playing. */
   nextClip: () => void;
-  /** Plays the clip of that id. */
+  /** Plays the clip of that id, on its own. */
   playClip: (clipId: string) => void;
-  /** Turns the microphone on or off. Turning it on stops any clip playing. */
+  /** Turns the microphone on or off. Turning it on stops the clips. */
   toggleMic: () => void;
+  /** Whether clips are playing: one is, or the next of a run is about to. */
+  isPlayingClips: boolean;
   isClipPlaying: boolean;
   /** Whether the microphone is on and being heard. */
   isMicOn: boolean;
@@ -50,6 +42,9 @@ export function useSessionControls(): SessionControls {
   const isClipPlaying = usePerceptionStore(
     (state) => state.activeClipId !== null,
   );
+  const isCycling = usePerceptionStore((state) => state.isCycling);
+  const setCycling = usePerceptionStore((state) => state.setCycling);
+  const takeNextClip = usePerceptionStore((state) => state.takeNextClip);
   const setConnectionError = usePerceptionStore(
     (state) => state.setConnectionError,
   );
@@ -60,16 +55,19 @@ export function useSessionControls(): SessionControls {
     // Inside the tap, so browsers let the clips be heard later.
     unlockBotAudio();
     setConnectionError(null);
-    ensureSession(client).then(action, () => setConnectionError(START_FAILED));
+    ensureSession(client).then(action, () => {
+      setCycling(false);
+      setConnectionError(START_FAILED);
+    });
   };
 
-  /** Plays a clip: the one named, or one at random. */
+  /** Plays a clip: the one named, or the next of the pass through them all. */
   const play = (clipId?: string) => {
+    cancelAdvance();
     inSession(() => {
       enableMic(false);
-      // The clips are known once the session is: read now, not when the button was drawn.
-      const { session, lastClipId } = usePerceptionStore.getState();
-      const chosen = clipId ?? randomClip(session?.clips ?? [], lastClipId);
+      // The clips are known once the session is: asked for now, not when the button was drawn.
+      const chosen = clipId ?? takeNextClip();
       // With no clip named, the bot plays the next one in its own list.
       client?.sendClientMessage(
         "play-clip",
@@ -78,26 +76,38 @@ export function useSessionControls(): SessionControls {
     });
   };
 
+  /** Stops the clips: the one playing, and the run through the rest. */
+  const stopClips = () => {
+    cancelAdvance();
+    setCycling(false);
+    client?.sendClientMessage("stop-clip");
+  };
+
   return {
-    toggleClip: () => {
-      if (isClipPlaying) {
-        client?.sendClientMessage("stop-clip");
+    toggleClips: () => {
+      if (isCycling || isClipPlaying) {
+        stopClips();
         return;
       }
+      setCycling(true);
       play();
     },
     nextClip: () => play(),
-    playClip: play,
+    playClip: (clipId) => {
+      setCycling(false);
+      play(clipId);
+    },
     toggleMic: () => {
       if (isMicOn) {
         enableMic(false);
         return;
       }
       inSession(() => {
-        client?.sendClientMessage("stop-clip");
+        stopClips();
         enableMic(true);
       });
     },
+    isPlayingClips: isCycling || isClipPlaying,
     isClipPlaying,
     isMicOn,
     isMicUnavailable,

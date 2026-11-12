@@ -23,8 +23,9 @@ const UNSUPPORTED = "This browser can't draw the pill.";
 const PILL_SETTINGS = {
   // The pill is drawn on a canvas that reaches past its place on the page, so
   // its glow has room to fade out: this is how much of that canvas the pill
-  // itself takes, which leaves it as large as its place.
-  fill: 0.56,
+  // itself takes, which leaves it a little smaller than its place, with the
+  // clip ring round it.
+  fill: 0.5,
   // Idle, it goes on turning slowly and never comes to rest, so a spin winds
   // down into that turn instead of snapping home.
   idleTurnSeconds: 20,
@@ -75,6 +76,7 @@ export function VoicePill({ className }: VoicePillProps) {
 
   return (
     <div className={cn("relative shrink-0", className)}>
+      <div aria-hidden="true" className="absolute pill-bed" />
       <ClipRing />
       {/* Larger than its place, and faded out towards its edge, so the glow
           is never cut off square. The pill sets its own box to fill this one. */}

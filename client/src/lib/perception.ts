@@ -56,11 +56,16 @@ export interface Figure {
   fraction: number;
 }
 
+/** The unit a measure is shown in: a scale that tops out at 1 is a percentage. */
+export function unitOf(measure: Measure): string {
+  return measure.max === 1 ? PERCENT : (measure.unit ?? "");
+}
+
 export function figureFor(measure: Measure, value: number): Figure {
   const fraction = Math.min(Math.max(value / measure.max, 0), 1);
-  return measure.max === 1
-    ? { text: String(Math.round(fraction * 100)), unit: PERCENT, fraction }
-    : { text: value.toFixed(1), unit: measure.unit ?? "", fraction };
+  const text =
+    measure.max === 1 ? String(Math.round(fraction * 100)) : value.toFixed(1);
+  return { text, unit: unitOf(measure), fraction };
 }
 
 export function percent(confidence: number): string {

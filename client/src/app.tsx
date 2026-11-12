@@ -5,6 +5,7 @@ import { VoicePill } from "@/components/pill/voice-pill";
 import { ResultsPanel } from "@/components/results/results-panel";
 import { TurnCaption } from "@/components/results/turn-caption";
 import { VoiceWaveform } from "@/components/waveform/voice-waveform";
+import { useClipCycle } from "@/hooks/use-clip-cycle";
 import { useHeardVoice } from "@/hooks/use-heard-voice";
 import { usePerceptionEvents } from "@/hooks/use-perception-events";
 import { isTone, tonesOf } from "@/lib/perception";
@@ -12,6 +13,7 @@ import { usePerceptionStore } from "@/stores/perception-store";
 
 export function App() {
   usePerceptionEvents();
+  useClipCycle();
   const voice = useHeardVoice();
   const tone = usePerceptionStore(
     (state) => tonesOf(state.reading?.signals)?.[0]?.label,
@@ -30,7 +32,7 @@ export function App() {
           <AppHeader />
         </div>
         <main className="grid min-h-0 flex-1 items-center gap-frame lg:grid-cols-2 lg:gap-16">
-          <div className="flex flex-col items-center gap-frame-sm">
+          <div className="flex flex-col items-center gap-frame lg:gap-frame-lg">
             <VoicePill className="size-pill" />
             {/* Above the pill's canvas, which reaches down over them. */}
             <div className="relative z-10">

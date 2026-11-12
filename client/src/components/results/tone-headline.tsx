@@ -27,10 +27,7 @@ export function ToneHeadline({ tone, readingId }: ToneHeadlineProps) {
         <span
           key={readingId}
           aria-hidden={tone ? "true" : undefined}
-          className={cn(
-            "flex",
-            tone ? "text-tone-now text-glow" : "opacity-30",
-          )}
+          className={cn("flex", tone ? "text-tone-now" : "opacity-30")}
         >
           {[...word].map((letter, index) => (
             <span

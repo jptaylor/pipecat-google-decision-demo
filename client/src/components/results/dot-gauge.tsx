@@ -1,4 +1,4 @@
-import { figureFor, type Measure } from "@/lib/perception";
+import { figureFor, type Measure, unitOf } from "@/lib/perception";
 import { cn } from "@/lib/utils";
 
 const EMPTY = "--";
@@ -45,10 +45,10 @@ export function DotGauge({ measure, value }: DotGaugeProps) {
             key={index}
             aria-hidden="true"
             className={cn(
-              "absolute size-1.5 -translate-1/2 rounded-full text-tone-now transition-[background-color,box-shadow] duration-500 motion-reduce:transition-none",
+              "absolute size-1.5 -translate-1/2 rounded-full transition-colors duration-500 motion-reduce:transition-none",
               index >= lit && "bg-meter-track",
-              index < lit - 1 && "bg-tone-now dot-lit",
-              index === lit - 1 && "bg-foreground dot-head",
+              index < lit - 1 && "bg-tone-now",
+              index === lit - 1 && "bg-foreground",
             )}
             // Each dot's place on the arc.
             style={position}
@@ -63,11 +63,9 @@ export function DotGauge({ measure, value }: DotGaugeProps) {
           >
             {figure?.text ?? EMPTY}
           </span>
-          {figure?.unit ? (
-            <span className="text-xs leading-none text-muted-foreground">
-              {figure.unit}
-            </span>
-          ) : null}
+          <span className="text-xs leading-none text-muted-foreground">
+            {unitOf(measure)}
+          </span>
         </span>
       </div>
       <span className="text-xs font-medium tracking-widest text-muted-foreground uppercase">

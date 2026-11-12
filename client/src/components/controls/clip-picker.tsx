@@ -11,13 +11,16 @@ import { useSessionControls } from "@/hooks/use-session-controls";
 import { usePerceptionStore } from "@/stores/perception-store";
 import type { ClipInfo } from "@/types/perception";
 
-const LABEL = "Pick a clip";
-const BEFORE_SESSION = "Press play to load the clips";
+const LABEL = "Select clip";
 /** One list for "no clips yet", so the store's selector returns the same value each time. */
 const NO_CLIPS: ClipInfo[] = [];
 
+function capitalize(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
 function clipLabel(clip: ClipInfo): string {
-  return `${clip.mood} · ${clip.sincerity} · ${clip.voice}`;
+  return `${capitalize(clip.mood)} · ${capitalize(clip.sincerity)} · ${clip.voice}`;
 }
 
 /** The clips by whether they were meant, in the order the bot lists them. */
@@ -44,10 +47,8 @@ export function ClipPicker() {
       items={clips.map((clip) => ({ value: clip.id, label: clipLabel(clip) }))}
       disabled={clips.length === 0}
     >
-      <SelectTrigger aria-label={LABEL} className="min-h-11 w-64 capitalize">
-        <SelectValue
-          placeholder={clips.length === 0 ? BEFORE_SESSION : LABEL}
-        />
+      <SelectTrigger aria-label={LABEL} className="min-h-11 w-80 max-w-full">
+        <SelectValue placeholder={LABEL} />
       </SelectTrigger>
       <SelectContent>
         {bySincerity(clips).map(([sincerity, group]) => (

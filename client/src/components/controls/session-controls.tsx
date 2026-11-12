@@ -12,9 +12,9 @@ import { useSessionControls } from "@/hooks/use-session-controls";
 import { useSessionStatus } from "@/hooks/use-session-status";
 import { usePerceptionStore } from "@/stores/perception-store";
 
-const PLAY = "Play a clip at random";
-const STOP = "Stop the clip";
-const NEXT = "Play another clip at random";
+const PLAY = "Play the clips";
+const STOP = "Stop the clips";
+const NEXT = "Play the next clip";
 const MIC_ON = "Turn on the microphone";
 const MIC_OFF = "Turn off the microphone";
 const MIC_UNAVAILABLE = "The microphone is unavailable. Check its permission.";
@@ -22,13 +22,13 @@ const MIC_UNAVAILABLE = "The microphone is unavailable. Check its permission.";
 const BUTTON_CLASSES =
   "size-control rounded-full [&_svg:not([class*='size-'])]:size-6";
 
-/** The demo's controls: play a clip at random or pick one, move on to another, or open the microphone. */
+/** The demo's controls: run through the clips or pick one, skip to the next, or open the microphone. */
 export function SessionControls() {
   const {
-    toggleClip,
+    toggleClips,
     nextClip,
     toggleMic,
-    isClipPlaying,
+    isPlayingClips,
     isMicOn,
     isMicUnavailable,
   } = useSessionControls();
@@ -40,14 +40,13 @@ export function SessionControls() {
     <div className="flex flex-col items-center gap-frame-sm">
       <div className="flex items-center gap-4">
         <Button
-          variant={isClipPlaying ? "default" : "outline"}
           size="icon-lg"
           disabled={isConnecting}
-          aria-label={isClipPlaying ? STOP : PLAY}
-          onClick={toggleClip}
+          aria-label={isPlayingClips ? STOP : PLAY}
+          onClick={toggleClips}
           className={BUTTON_CLASSES}
         >
-          {isClipPlaying ? (
+          {isPlayingClips ? (
             <SquareIcon className="fill-current" />
           ) : (
             <PlayIcon className="fill-current" />
@@ -63,6 +62,11 @@ export function SessionControls() {
         >
           <SkipForwardIcon className="fill-current" />
         </Button>
+        {/* Clips on one side, the microphone on the other. */}
+        <span
+          aria-hidden="true"
+          className="size-1 rounded-full bg-muted-foreground/60"
+        />
         <Button
           variant={isMicOn ? "default" : "outline"}
           size="icon-lg"
@@ -76,11 +80,10 @@ export function SessionControls() {
         </Button>
       </div>
       <ClipPicker />
-      {error ? (
-        <p role="alert" className="text-center text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
+      {/* Always a line tall, so an error doesn't push the pill up. */}
+      <p role="alert" className="min-h-5 text-center text-sm text-destructive">
+        {error}
+      </p>
     </div>
   );
 }

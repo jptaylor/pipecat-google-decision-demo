@@ -29,28 +29,24 @@
    */
   --text-headline: min(calc(var(--frame-unit) * 8), 13vw);
   --text-gauge: min(calc(var(--frame-unit) * 4.6), 9vw);
-  --text-panel: calc(var(--frame-unit) * 3);
-  --text-latency: min(calc(var(--frame-unit) * 8), 14vw);
-  --spacing-pill: min(calc(var(--frame-unit) * 50), 80vw);
-  --spacing-gauge: min(calc(var(--frame-unit) * 15), 36vw);
-  --spacing-dotgrid: calc(var(--frame-unit) * 13);
+  --text-panel: calc(var(--frame-unit) * 3.2);
+  --spacing-pill: min(calc(var(--frame-unit) * var(--pill-units)), 80vw);
+  --spacing-gauge: min(calc(var(--frame-unit) * 15), 20vw);
+  --spacing-dotgrid: calc(var(--frame-unit) * 14);
   --spacing-control: max(2.75rem, calc(var(--frame-unit) * 7));
   --spacing-wave: calc(var(--frame-unit) * 7);
   --spacing-frame: calc(var(--frame-unit) * 3);
   --spacing-frame-sm: calc(var(--frame-unit) * 1.5);
+  --spacing-frame-lg: calc(var(--frame-unit) * 5);
   /* The panels while a turn is heard, and while the model reads it. */
   /* A dot of the clip ring as the clip reaches it: a white head that settles into the tone. */
   --animate-ring-dot: ring-dot 0.6s linear forwards;
   @keyframes ring-dot {
     0% {
       background-color: var(--foreground);
-      box-shadow:
-        0 0 12px var(--foreground),
-        0 0 22px var(--tone-now);
     }
     100% {
       background-color: var(--tone-now);
-      box-shadow: 0 0 9px color-mix(in oklab, var(--tone-now) 75%, transparent);
     }
   }
   /* A letter of the tone's name as a new reading lands. */
@@ -78,11 +74,23 @@
       opacity: 0.2;
     }
   }
+  /* The word over the panels, in step with them. */
+  --animate-word-hearing: word 1.6s ease-in-out infinite;
+  --animate-word-assessing: word 0.6s ease-in-out infinite;
+  @keyframes word {
+    50% {
+      opacity: 0.45;
+    }
+  }
   --animate-hearing: working 1.6s ease-in-out infinite;
   --animate-assessing: working 0.6s ease-in-out infinite;
   @keyframes working {
+    0%,
+    100% {
+      opacity: 0.3;
+    }
     50% {
-      opacity: 0.45;
+      opacity: 0.14;
     }
   }
   /* Dot meters: a lit dot and an unlit one. */
@@ -147,8 +155,11 @@
 :root {
   /* Side by side, the page is about 90 units tall; stacked on a narrow screen, about 195. */
   --frame-unit: 0.5dvh;
+  /* How many units across the pill's place is: less when it shares the height with the readings. */
+  --pill-units: 29;
   @media (width >= 64rem) {
     --frame-unit: 1dvh;
+    --pill-units: 50;
   }
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -274,13 +285,28 @@
   inherits: true;
   initial-value: #6f8cff;
 }
+/* How much of the tone's colour is in the bed behind the pill: none while the tone is neutral. */
+@property --bed-tint {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
 @layer components {
   .tone-scope {
     --tone-now: var(--tone-neutral);
     --tone-now-2: var(--tone-neutral-2);
+    --bed-tint: 0%;
     transition:
       --tone-now 1.2s ease,
-      --tone-now-2 1.6s ease;
+      --tone-now-2 1.6s ease,
+      --bed-tint 1.2s ease;
+  }
+  .tone-scope:is(
+    [data-tone="positive"],
+    [data-tone="sad"],
+    [data-tone="frustrated"]
+  ) {
+    --bed-tint: 24%;
   }
   .tone-scope[data-tone="positive"] {
     --tone-now: var(--tone-positive);
@@ -316,6 +342,25 @@
     transparent
   );
 }
+/*
+ * The bed the pill sits in: a pool of dark that takes the backdrop's dots out
+ * from behind it, with the tone's colour rising through it once there is one.
+ */
+@utility pill-bed {
+  inset: -14%;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--tone-now) var(--bed-tint), transparent) 35%,
+      transparent 100%
+    ),
+    radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--background) 85%, transparent) 55%,
+      transparent 100%
+    );
+}
 @utility backdrop-glow-2 {
   right: -20%;
   bottom: -40%;
@@ -326,19 +371,4 @@
     color-mix(in oklab, var(--tone-now-2) 8%, transparent),
     transparent
   );
-}
-/* A lit dot's halo, and the brighter one of the dot a meter has reached. Both take the text colour. */
-@utility dot-lit {
-  box-shadow: 0 0 9px color-mix(in oklab, currentColor 70%, transparent);
-}
-@utility dot-head {
-  box-shadow:
-    0 0 12px var(--foreground),
-    0 0 22px currentColor;
-}
-/* The glow behind the tone's name. */
-@utility text-glow {
-  text-shadow:
-    0 0 18px color-mix(in oklab, currentColor 70%, transparent),
-    0 0 70px color-mix(in oklab, currentColor 40%, transparent);
 }

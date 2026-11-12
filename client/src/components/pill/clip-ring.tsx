@@ -5,7 +5,7 @@ import { usePerceptionStore } from "@/stores/perception-store";
 
 /** How many dots the ring has, and how far out they sit, as a share of the pill's place. */
 const DOTS = 96;
-const RADIUS = 48;
+const RADIUS = 50;
 
 /** Where each dot sits, clockwise from the top. */
 const POSITIONS = Array.from({ length: DOTS }, (_, index) => {
