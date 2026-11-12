@@ -123,10 +123,10 @@ export const defaultSettings = {
   /** 0 settles dead, 1 overshoots freely */
   bounce: 0.5,
   /**
-   * Degrees it leans towards the pointer as it moves about the page, with a
-   * wobble; it straightens up when the pointer stops. 0 for none.
+   * Degrees it turns to look at the pointer as it moves about the page; it
+   * straightens up a while after the pointer stops. 0 for none.
    */
-  pointerTilt: 9,
+  pointerTilt: 11,
   /** The entrance: it spins in from the dark and from further off. */
   introSeconds: 1.8,
   /** how many turns it makes on the way in */

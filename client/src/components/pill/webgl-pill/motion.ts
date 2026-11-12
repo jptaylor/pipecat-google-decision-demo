@@ -38,7 +38,7 @@ export type MotionSettings = {
   bounce: number;
   /** seconds with nothing happening before it comes to rest */
   restAfter: number;
-  /** degrees it leans towards a moving pointer; 0 for none */
+  /** degrees it turns to look at the pointer; 0 for none */
   pointerTilt: number;
 };
 
@@ -48,6 +48,9 @@ export type VoiceDrive = {
   bands: [number, number, number];
   speaking: boolean;
 };
+
+// Seconds it goes on looking at a pointer that has stopped moving.
+const GAZE_HOLD = 2.5;
 
 const X: Vec3 = [1, 0, 0];
 const Y: Vec3 = [0, 1, 0];
@@ -111,7 +114,7 @@ export class Motion {
   }
 
   // The pointer has moved to (x, y): -1..1 across and down from the pill. It
-  // leans that way, with a wobble, for as long as the pointer keeps moving,
+  // turns its face that way and keeps it there while the pointer is about,
   // then straightens up again. Counts as something happening.
   look(x: number, y: number) {
     this.gazeTo = [Math.max(-1, Math.min(1, x)), Math.max(-1, Math.min(1, y))];
@@ -281,27 +284,28 @@ export class Motion {
       omega = e > 0 ? 5 : 7;
       zeta = e > 0 ? 0.85 : 1;
     }
-    // It leans towards a moving pointer, on top of whatever else it is
-    // doing, and straightens up once the pointer has been still a moment, so
-    // a pointer parked in a corner doesn't leave it askew.
+    // It looks at the pointer, on top of whatever else it is doing, and
+    // straightens up, slowly, once the pointer has been still a while, so a
+    // pointer parked in a corner doesn't leave it askew.
     this.glanced += dt;
-    const watching = this.glanced < 1.2 && s.pointerTilt > 0;
+    const watching = this.glanced < GAZE_HOLD && s.pointerTilt > 0;
     for (let a = 0; a < 2; a++) {
       const aim = watching ? this.gazeTo[a] : 0;
-      this.gaze[a] += (aim - this.gaze[a]) * (1 - Math.exp(-dt / (watching ? 0.09 : 0.5)));
+      this.gaze[a] += (aim - this.gaze[a]) * (1 - Math.exp(-dt / (watching ? 0.12 : 0.8)));
       if (Math.abs(aim - this.gaze[a]) < 1e-5) this.gaze[a] = aim; // arrive, so it can come to a dead stop
     }
     if (!fixed && this.state !== 'spinning' && (this.gaze[0] !== 0 || this.gaze[1] !== 0)) {
-      // Side to side it turns its face to the pointer; up and down it tips
-      // the other way, its face lifting as the pointer drops below it.
+      // It turns its face to the pointer: to the side the pointer is on,
+      // and down as the pointer drops below it.
       const lean = s.pointerTilt * DEG;
-      target = qMul(qMul(qAxisAngle(Y, this.gaze[0] * lean), qAxisAngle(X, -this.gaze[1] * lean)), target);
+      target = qMul(qMul(qAxisAngle(Y, this.gaze[0] * lean), qAxisAngle(X, this.gaze[1] * lean)), target);
       const shift = 0.004 * s.pointerTilt;
       place = [place[0] + this.gaze[0] * shift, place[1] - this.gaze[1] * shift, place[2]];
       if (this.glanced < 0.5) {
-        // A looser spring while the pointer is on the move: it wobbles after it.
-        omega = Math.max(omega, 8);
-        zeta = Math.min(zeta, 0.45);
+        // A livelier spring while the pointer is on the move: it follows
+        // closely and settles with one small overshoot, not a wobble.
+        omega = Math.max(omega, 9);
+        zeta = Math.min(zeta, 0.7);
       }
     }
     if (this.entering < 1) {

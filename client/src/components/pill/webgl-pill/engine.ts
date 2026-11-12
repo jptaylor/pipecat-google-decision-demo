@@ -411,15 +411,19 @@ export function createPillEngine(canvas: HTMLCanvasElement, options: PillEngineO
     const calm = reducedMotion();
     if (calm) motion.hush();
     motion.mode = calm ? 'rest' : motionMode;
-    // The pointer has moved since the last frame: lean towards where it is
-    // now, measured from the pill out to the edge of the window.
+    // The pointer has moved since the last frame: look at where it is now,
+    // measured from the pill out to the edge of the window.
     if (pointerAt) {
       const box = canvas.getBoundingClientRect();
       const reach = 0.5 * Math.max(window.innerWidth, window.innerHeight);
       if (interactive && !held && !calm && params.pointerTilt > 0 && box.width > 0 && reach > 0) {
-        // Quicker to respond near the pill, levelling off towards the edge.
-        const across = (v: number) => Math.sin((Math.max(-1, Math.min(1, v / reach)) * Math.PI) / 2);
-        motion.look(across(pointerAt.x - (box.left + box.width / 2)), across(pointerAt.y - (box.top + box.height / 2)));
+        // Straight towards the pointer, by more the further off it is:
+        // quicker to respond near the pill, levelling off towards the edge.
+        const dx = (pointerAt.x - (box.left + box.width / 2)) / reach;
+        const dy = (pointerAt.y - (box.top + box.height / 2)) / reach;
+        const far = Math.min(1, Math.hypot(dx, dy));
+        const turn = far > 0 ? Math.sin((far * Math.PI) / 2) / Math.hypot(dx, dy) : 0;
+        motion.look(dx * turn, dy * turn);
       }
       pointerAt = null;
     }

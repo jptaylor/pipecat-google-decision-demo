@@ -77,7 +77,7 @@ pipecat cloud deploy
 ```
 
 `pcc-deploy.toml` names the agent `google-perception-demo`, turns on Krisp's voice isolation for the microphone
-and keeps 15 instances warm (`min_agents`), which are billed whether or not anyone is using them. A session ends when the visitor leaves, after five minutes
+and keeps 15 instances warm (`min_agents`, 30 at most), which are billed whether or not anyone is using them. A session ends when the visitor leaves, after five minutes
 without speech, or after `SESSION_MAX_SECS` (600 by default), whichever comes first.
 
 **The page**, to a static host that can run one function. In production the page connects over Daily
@@ -89,8 +89,9 @@ written for Vercel's `api/` folder; on another host, mount its `POST` at `/api/s
 - `PIPECAT_CLOUD_PUBLIC_KEY`: a public key from `pipecat cloud organizations keys create`
 
 The glass pill is the source of the `webgl-pill` project (0.3.0), in `client/src/components/pill/webgl-pill/`.
-It is kept as it is there: it type-checks under its own settings (`client/tsconfig.pill.json`) and isn't held to
-the app's lint or formatting rules.
+It type-checks under that project's settings (`client/tsconfig.pill.json`) and isn't held to the app's lint or
+formatting rules. One thing differs from 0.3.0: it turns to look at the pointer, on both axes, where 0.3.0 tipped
+away from it up and down (`motion.ts`, `engine.ts`, and `pointerTilt` in `settings.ts`).
 
 ## Changing what it reads
 

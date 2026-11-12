@@ -11,3 +11,5 @@ agent_profile = "agent-1x"
     # Instances kept warm, so that many visitors can start at once with no cold start.
     # Warm instances are billed whether or not anyone is using them.
     min_agents = 15
+    # The most that can run at once. It has to be at least min_agents; this leaves room for a busy spell.
+    max_agents = 30
