@@ -7,11 +7,11 @@ import type { Mood } from "@/components/pill/webgl-pill/mood";
 import type { MotionMode } from "@/components/pill/webgl-pill/motion";
 import { Pill, type PillHandle } from "@/components/pill/webgl-pill/Pill";
 import { useHeardVoice } from "@/hooks/use-heard-voice";
+import { useSceneTone } from "@/hooks/use-scene-tone";
 import {
   type SessionStatus,
   useSessionStatus,
 } from "@/hooks/use-session-status";
-import { isTone, tonesOf } from "@/lib/perception";
 import { cn } from "@/lib/utils";
 import { usePerceptionStore } from "@/stores/perception-store";
 import { isServerMessage } from "@/types/perception";
@@ -50,8 +50,9 @@ interface VoicePillProps {
 
 /**
  * The glass pill, following the turn: its light moves with the voice being
- * heard, it turns over while the model reads, and it takes the colour of the
- * tone the model heard, with a pulse as the reading lands.
+ * heard, it is violet while the turn is heard and turns over while the model
+ * reads, and it takes the colour of the tone the model heard, with a pulse as
+ * the reading lands.
  */
 export function VoicePill({ className }: VoicePillProps) {
   // The pill's imperative handle, for the pulse.
@@ -60,9 +61,7 @@ export function VoicePill({ className }: VoicePillProps) {
   const isClipPlaying = usePerceptionStore(
     (state) => state.activeClipId !== null,
   );
-  const tone = usePerceptionStore(
-    (state) => tonesOf(state.reading?.signals)?.[0]?.label,
-  );
+  const tone = useSceneTone();
   const voice = useHeardVoice();
 
   useRTVIClientEvent(RTVIEvent.ServerMessage, (data: unknown) => {
@@ -71,8 +70,8 @@ export function VoicePill({ className }: VoicePillProps) {
     }
   });
 
-  // A turn not read yet has no tone: the pill waits in its neutral colour.
-  const mood: Mood = isTone(tone) ? tone : "neutral";
+  // Zinc at rest and for a neutral reading, violet while a turn is heard and read, then the tone's own.
+  const mood: Mood = tone === "listening" ? "violet" : tone;
 
   return (
     <div className={cn("relative shrink-0", className)}>

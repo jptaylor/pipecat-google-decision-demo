@@ -245,12 +245,15 @@
   /* Each tone's colour, and a second one its glow drifts towards. */
   --tone-positive: #4ade80;
   --tone-positive-2: #d4ff5e;
-  --tone-neutral: #c3cbe0;
-  --tone-neutral-2: #6f8cff;
+  --tone-neutral: #c4c4cc;
+  --tone-neutral-2: #8e8e99;
   --tone-sad: #5b8cff;
   --tone-sad-2: #a77bff;
   --tone-frustrated: #ff5b2e;
   --tone-frustrated-2: #ffb13b;
+  /* While a turn is heard and read: the pill's own violet. */
+  --tone-listening: #b867ff;
+  --tone-listening-2: #f3d4ff;
   --meter: var(--foreground);
   --meter-track: oklch(1 0 0 / 12%);
 }
@@ -278,12 +281,12 @@
 @property --tone-now {
   syntax: "<color>";
   inherits: true;
-  initial-value: #c3cbe0;
+  initial-value: #c4c4cc;
 }
 @property --tone-now-2 {
   syntax: "<color>";
   inherits: true;
-  initial-value: #6f8cff;
+  initial-value: #8e8e99;
 }
 /* How much of the tone's colour is in the bed behind the pill: none while the tone is neutral. */
 @property --bed-tint {
@@ -302,11 +305,16 @@
       --bed-tint 1.2s ease;
   }
   .tone-scope:is(
+    [data-tone="listening"],
     [data-tone="positive"],
     [data-tone="sad"],
     [data-tone="frustrated"]
   ) {
     --bed-tint: 24%;
+  }
+  .tone-scope[data-tone="listening"] {
+    --tone-now: var(--tone-listening);
+    --tone-now-2: var(--tone-listening-2);
   }
   .tone-scope[data-tone="positive"] {
     --tone-now: var(--tone-positive);

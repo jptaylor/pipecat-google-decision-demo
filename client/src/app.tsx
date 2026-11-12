@@ -8,22 +8,19 @@ import { VoiceWaveform } from "@/components/waveform/voice-waveform";
 import { useClipCycle } from "@/hooks/use-clip-cycle";
 import { useHeardVoice } from "@/hooks/use-heard-voice";
 import { usePerceptionEvents } from "@/hooks/use-perception-events";
-import { isTone, tonesOf } from "@/lib/perception";
-import { usePerceptionStore } from "@/stores/perception-store";
+import { useSceneTone } from "@/hooks/use-scene-tone";
 
 export function App() {
   usePerceptionEvents();
   useClipCycle();
   const voice = useHeardVoice();
-  const tone = usePerceptionStore(
-    (state) => tonesOf(state.reading?.signals)?.[0]?.label,
-  );
+  const tone = useSceneTone();
   return (
     // One screen, never scrolled: every size inside is counted in the screen's height (index.css),
     // and what reaches past it is clipped, which unlike hiding it leaves nothing to scroll to.
-    // The tone of the reading on show colours the backdrop, the ring and the gauges.
+    // The tone of the reading on show, or the colour of a turn in progress, colours the backdrop, the ring and the gauges.
     <div
-      data-tone={isTone(tone) ? tone : "neutral"}
+      data-tone={tone}
       className="tone-scope relative isolate h-dvh overflow-clip"
     >
       <Backdrop />
