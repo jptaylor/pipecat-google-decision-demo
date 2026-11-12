@@ -12,7 +12,7 @@ import { useSessionControls } from "@/hooks/use-session-controls";
 import { useSessionStatus } from "@/hooks/use-session-status";
 import { usePerceptionStore } from "@/stores/perception-store";
 
-const PLAY = "Play the clips";
+const PLAY = "Play the clips in order";
 const STOP = "Stop the clips";
 const NEXT = "Play the next clip";
 const MIC_ON = "Turn on the microphone";

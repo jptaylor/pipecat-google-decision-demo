@@ -8,13 +8,26 @@ import { unlockBotAudio } from "@/components/pipecat/bot-audio";
 import { cancelAdvance } from "@/lib/clip-cycle";
 import { ensureSession } from "@/lib/pipecat-client";
 import { usePerceptionStore } from "@/stores/perception-store";
+import type { ClipInfo } from "@/types/perception";
 
 const START_FAILED = "Couldn't connect. Try again.";
 
+/**
+ * The clip a run plays next: the first, or the one after `lastClipId` in the
+ * bot's list, round to the first again. Undefined before the clips are known.
+ */
+function clipInOrder(
+  clips: ClipInfo[],
+  lastClipId: string | null,
+): string | undefined {
+  const last = clips.findIndex((clip) => clip.id === lastClipId);
+  return clips[(last + 1) % clips.length]?.id;
+}
+
 interface SessionControls {
-  /** Starts running through the clips, one after another, or stops. */
+  /** Starts running through the clips in order, from the first, or stops. */
   toggleClips: () => void;
-  /** Plays the next clip now, in place of any clip playing. */
+  /** Plays the clip after the last one now, in place of any clip playing. */
   nextClip: () => void;
   /** Plays the clip of that id, on its own. */
   playClip: (clipId: string) => void;
@@ -44,7 +57,6 @@ export function useSessionControls(): SessionControls {
   );
   const isCycling = usePerceptionStore((state) => state.isCycling);
   const setCycling = usePerceptionStore((state) => state.setCycling);
-  const takeNextClip = usePerceptionStore((state) => state.takeNextClip);
   const setConnectionError = usePerceptionStore(
     (state) => state.setConnectionError,
   );
@@ -61,14 +73,17 @@ export function useSessionControls(): SessionControls {
     });
   };
 
-  /** Plays a clip: the one named, or the next of the pass through them all. */
-  const play = (clipId?: string) => {
+  /** Plays a clip: the one named, or the next of the list, which `fromStart` makes the first. */
+  const play = (clipId?: string, fromStart = false) => {
     cancelAdvance();
     inSession(() => {
       enableMic(false);
-      // The clips are known once the session is: asked for now, not when the button was drawn.
-      const chosen = clipId ?? takeNextClip();
-      // With no clip named, the bot plays the next one in its own list.
+      // The clips are known once the session is: read now, not when the button was drawn.
+      const { session, lastClipId } = usePerceptionStore.getState();
+      const chosen =
+        clipId ??
+        clipInOrder(session?.clips ?? [], fromStart ? null : lastClipId);
+      // Before the clips are known, the bot plays the first of its own list, which is the same one.
       client?.sendClientMessage(
         "play-clip",
         chosen ? { clipId: chosen } : undefined,
@@ -90,7 +105,7 @@ export function useSessionControls(): SessionControls {
         return;
       }
       setCycling(true);
-      play();
+      play(undefined, true);
     },
     nextClip: () => play(),
     playClip: (clipId) => {
