@@ -1,0 +1,78 @@
+import { figureFor, type Measure } from "@/lib/perception";
+import { cn } from "@/lib/utils";
+
+const EMPTY = "--";
+/** The gauge's dots: how many, the arc they span, and how far out they sit, as a share of its box. */
+const DOTS = 36;
+const START_DEGREES = 135;
+const SWEEP_DEGREES = 270;
+const RADIUS = 44.6;
+
+/** Where each dot sits, from the bottom left round to the bottom right. */
+const POSITIONS = Array.from({ length: DOTS }, (_, index) => {
+  const angle =
+    ((START_DEGREES + (index * SWEEP_DEGREES) / (DOTS - 1)) * Math.PI) / 180;
+  return {
+    left: `${(50 + RADIUS * Math.cos(angle)).toFixed(2)}%`,
+    top: `${(50 + RADIUS * Math.sin(angle)).toFixed(2)}%`,
+  };
+});
+
+interface DotGaugeProps {
+  measure: Measure;
+  /** The signal's value in the reading on show, or undefined when there is none. */
+  value: number | undefined;
+}
+
+/** One measured signal as an arc of dots lit up to its value, with the figure in the middle. */
+export function DotGauge({ measure, value }: DotGaugeProps) {
+  const figure = value === undefined ? null : figureFor(measure, value);
+  const lit = figure ? Math.max(1, Math.round(figure.fraction * DOTS)) : 0;
+  return (
+    <article className="flex min-w-0 flex-col items-center gap-1">
+      <div
+        role="meter"
+        aria-label={measure.title}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round((figure?.fraction ?? 0) * 100)}
+        aria-valuetext={figure ? `${figure.text} ${figure.unit}` : undefined}
+        className="relative size-gauge"
+      >
+        {POSITIONS.map((position, index) => (
+          <span
+            // The dots never reorder, so their position identifies them.
+            key={index}
+            aria-hidden="true"
+            className={cn(
+              "absolute size-1.5 -translate-1/2 rounded-full text-tone-now transition-[background-color,box-shadow] duration-500 motion-reduce:transition-none",
+              index >= lit && "bg-meter-track",
+              index < lit - 1 && "bg-tone-now dot-lit",
+              index === lit - 1 && "bg-foreground dot-head",
+            )}
+            // Each dot's place on the arc.
+            style={position}
+          />
+        ))}
+        <span className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+          <span
+            className={cn(
+              "font-display text-gauge leading-none font-black",
+              !figure && "opacity-30",
+            )}
+          >
+            {figure?.text ?? EMPTY}
+          </span>
+          {figure?.unit ? (
+            <span className="text-xs leading-none text-muted-foreground">
+              {figure.unit}
+            </span>
+          ) : null}
+        </span>
+      </div>
+      <span className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
+        {measure.title}
+      </span>
+    </article>
+  );
+}

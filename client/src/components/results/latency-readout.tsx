@@ -14,7 +14,7 @@ interface LatencyReadoutProps {
 /** How long the model took to read the turn, as big as any of its answers. */
 export function LatencyReadout({ reading }: LatencyReadoutProps) {
   return (
-    <article className="flex min-w-0 flex-col gap-1.5">
+    <article className="flex min-w-0 flex-col gap-1">
       <span className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
         {TITLE}
       </span>
@@ -22,7 +22,7 @@ export function LatencyReadout({ reading }: LatencyReadoutProps) {
         <span
           className={cn(
             "font-display text-latency leading-none font-black tracking-tight",
-            !reading && "text-muted-foreground/40",
+            !reading && "opacity-30",
           )}
         >
           {reading ? Math.round(reading.readMs) : EMPTY}

@@ -1,7 +1,7 @@
+import { DotGauge } from "@/components/results/dot-gauge";
 import { LatencyReadout } from "@/components/results/latency-readout";
-import { MeasureTile } from "@/components/results/measure-tile";
-import { ToneReadout } from "@/components/results/tone-readout";
-import { TurnFooter } from "@/components/results/turn-footer";
+import { ToneHeadline } from "@/components/results/tone-headline";
+import { TonePanels } from "@/components/results/tone-panels";
 import {
   type SessionStatus,
   useSessionStatus,
@@ -23,25 +23,25 @@ export function ResultsPanel() {
   const reading = usePerceptionStore((state) => state.reading);
   const status = useSessionStatus();
   const signals = reading?.signals;
+  const tones = tonesOf(signals);
   return (
-    <section aria-label={LABEL} className="flex min-w-0 flex-col gap-frame">
-      <div
-        aria-busy={status === "hearing" || status === "reading"}
-        className={cn("flex flex-col gap-frame", WORKING[status])}
-      >
-        <ToneReadout tones={tonesOf(signals)} />
-        <div className="grid grid-cols-2 gap-x-6 gap-y-frame sm:gap-x-10">
-          {MEASURES.map((measure) => (
-            <MeasureTile
-              key={measure.name}
-              measure={measure}
-              value={valueOf(signals, measure.name)}
-            />
-          ))}
-        </div>
-        <LatencyReadout reading={reading} />
+    <section
+      aria-label={LABEL}
+      aria-busy={status === "hearing" || status === "reading"}
+      className={cn("flex min-w-0 flex-col gap-frame", WORKING[status])}
+    >
+      <ToneHeadline tone={tones?.[0]?.label} readingId={reading?.id} />
+      <TonePanels tones={tones} />
+      <div className="grid grid-cols-2 gap-frame-sm sm:grid-cols-4">
+        {MEASURES.map((measure) => (
+          <DotGauge
+            key={measure.name}
+            measure={measure}
+            value={valueOf(signals, measure.name)}
+          />
+        ))}
       </div>
-      <TurnFooter />
+      <LatencyReadout reading={reading} />
     </section>
   );
 }

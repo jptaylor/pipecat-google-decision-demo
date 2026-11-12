@@ -34,6 +34,12 @@ export type MotionSettings = {
   listenPunch: number;
   /** one turn while spinning */
   spinSeconds: number;
+  /**
+   * one slow turn while idle; 0 to hold its place and look about instead. A
+   * spin that ends then slows into this turn rather than coming round to
+   * face front.
+   */
+  idleTurnSeconds: number;
   /** 0 settles dead, 1 overshoots freely */
   bounce: number;
   /** seconds with nothing happening before it comes to rest */
@@ -86,6 +92,8 @@ export class Motion {
   private roll = 0;
   private turn = 0;                      // how far round a spin has come, radians
   private turnEnd: number | null = null; // where a spin that was called off will stop
+  private turnRate = 0;                  // how fast it is turning, radians a second, eased between states
+  private turning = false;               // whether `turn` is where it is now: spinning, or turning idly
   private once = 1;                      // how far through a single turn it is; 1 when done
   private onceSeconds = 1.3;
   private entering = 1;                  // how far through its entrance it is; 1 when done
@@ -222,11 +230,26 @@ export class Motion {
     const auto: MotionState = voice.speaking ? 'listening' : this.calm > s.restAfter ? 'rest' : 'idle';
     const wanted: MotionState = fixed ? 'rest' : this.mode === 'auto' ? auto : this.mode;
     const turnRate = TAU / Math.max(0.2, s.spinSeconds);
+    // Idle, it can go on turning, slowly. Then a spin has nowhere to come
+    // home to: it slows down where it is.
+    const idleRate = s.idleTurnSeconds > 0 ? TAU / s.idleTurnSeconds : 0;
+    const drifting = idleRate > 0 && wanted === 'idle';
     if (wanted === 'spinning') {
-      if (this.state !== 'spinning') this.turn = this.heading();
+      if (this.state !== 'spinning' && !this.turning) this.turn = this.heading();
       this.state = 'spinning';
       this.turnEnd = null;
+      this.turnRate = turnRate;
       this.turn += turnRate * dt;
+    } else if (drifting) {
+      if (this.state !== 'spinning' && !this.turning) {
+        this.turn = this.heading();
+        this.turnRate = 0;
+      }
+      this.state = 'idle';
+      this.turnEnd = null;
+      // From a spin it winds down to the idle turn; from stillness it picks up.
+      this.turnRate += (idleRate - this.turnRate) * (1 - Math.exp(-dt / 0.7));
+      this.turn += this.turnRate * dt;
     } else if (this.state === 'spinning') {
       this.turnEnd ??= Math.ceil((this.turn + 0.9) / TAU) * TAU;
       const left = this.turnEnd - this.turn;
@@ -239,6 +262,7 @@ export class Motion {
     } else {
       this.state = wanted;
     }
+    this.turning = this.state === 'spinning' || drifting;
 
     // Waking is quick; going to rest takes its time.
     const awake = this.state !== 'rest';
@@ -259,6 +283,14 @@ export class Motion {
       target = facing(this.turn / DEG, 7);
       place = [0, s.bob * 0.5 * Math.sin(1.3 * t), 0.12];
       omega = 15;
+      zeta = 0.95;
+    } else if (drifting) {
+      // Turning slowly round the vertical, tipped as in a spin, with a little
+      // of the idle sway in how far it is tipped.
+      const pitch = 7 + 0.15 * s.idleSway * Math.sin(0.23 * s.idleSpeed * t + 2.1);
+      target = facing(this.turn / DEG, pitch);
+      place = [0, s.bob * 0.6 * Math.sin(0.8 * s.idleSpeed * t), 0];
+      omega = 9;
       zeta = 0.95;
     } else if (this.state === 'listening') {
       this.roll += dt * 0.25;

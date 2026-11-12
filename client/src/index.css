@@ -20,20 +20,64 @@
   --color-tone-neutral: var(--tone-neutral);
   --color-tone-sad: var(--tone-sad);
   --color-tone-frustrated: var(--tone-frustrated);
+  /* The tone of the reading on show, which the page's glow, ring and gauges take. */
+  --color-tone-now: var(--tone-now);
   /*
    * The page is one screen and never scrolls, so what is on it is sized in
    * units of the screen's height (--frame-unit, set below), and capped by
    * its width where a long word or number would run out of room.
    */
   --text-headline: min(calc(var(--frame-unit) * 8), 13vw);
-  --text-figure: min(calc(var(--frame-unit) * 7), 11vw);
-  --text-latency: min(calc(var(--frame-unit) * 9), 14vw);
-  --spacing-pill: min(calc(var(--frame-unit) * 44), 80vw);
+  --text-gauge: min(calc(var(--frame-unit) * 4.6), 9vw);
+  --text-panel: calc(var(--frame-unit) * 3);
+  --text-latency: min(calc(var(--frame-unit) * 8), 14vw);
+  --spacing-pill: min(calc(var(--frame-unit) * 50), 80vw);
+  --spacing-gauge: min(calc(var(--frame-unit) * 15), 36vw);
+  --spacing-dotgrid: calc(var(--frame-unit) * 13);
   --spacing-control: max(2.75rem, calc(var(--frame-unit) * 7));
   --spacing-wave: calc(var(--frame-unit) * 7);
   --spacing-frame: calc(var(--frame-unit) * 3);
   --spacing-frame-sm: calc(var(--frame-unit) * 1.5);
   /* The panels while a turn is heard, and while the model reads it. */
+  /* A dot of the clip ring as the clip reaches it: a white head that settles into the tone. */
+  --animate-ring-dot: ring-dot 0.6s linear forwards;
+  @keyframes ring-dot {
+    0% {
+      background-color: var(--foreground);
+      box-shadow:
+        0 0 12px var(--foreground),
+        0 0 22px var(--tone-now);
+    }
+    100% {
+      background-color: var(--tone-now);
+      box-shadow: 0 0 9px color-mix(in oklab, var(--tone-now) 75%, transparent);
+    }
+  }
+  /* A letter of the tone's name as a new reading lands. */
+  --animate-letter-in: letter-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  @keyframes letter-in {
+    0% {
+      opacity: 0;
+      transform: translateY(0.15em) scaleY(0.4);
+      filter: blur(8px);
+    }
+    60% {
+      opacity: 1;
+      filter: blur(0);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+      filter: none;
+    }
+  }
+  /* The header's status dot while something is happening. */
+  --animate-status: status 1.4s ease-in-out infinite;
+  @keyframes status {
+    50% {
+      opacity: 0.2;
+    }
+  }
   --animate-hearing: working 1.6s ease-in-out infinite;
   --animate-assessing: working 0.6s ease-in-out infinite;
   @keyframes working {
@@ -101,8 +145,8 @@
 }
 
 :root {
-  /* Side by side, the page is about 92 units tall; stacked on a narrow screen, about 170. */
-  --frame-unit: 0.55dvh;
+  /* Side by side, the page is about 90 units tall; stacked on a narrow screen, about 195. */
+  --frame-unit: 0.5dvh;
   @media (width >= 64rem) {
     --frame-unit: 1dvh;
   }
@@ -187,10 +231,15 @@
   --active-foreground: oklch(0.979 0.021 166.11);
   --inactive-background: oklch(0.702 0.189 22.23);
   --inactive-foreground: oklch(0.971 0.013 17.38);
-  --tone-positive: #1fd666;
-  --tone-neutral: #c4c4cc;
-  --tone-sad: #2f6bff;
-  --tone-frustrated: #ff4a1c;
+  /* Each tone's colour, and a second one its glow drifts towards. */
+  --tone-positive: #4ade80;
+  --tone-positive-2: #d4ff5e;
+  --tone-neutral: #c3cbe0;
+  --tone-neutral-2: #6f8cff;
+  --tone-sad: #5b8cff;
+  --tone-sad-2: #a77bff;
+  --tone-frustrated: #ff5b2e;
+  --tone-frustrated-2: #ffb13b;
   --meter: var(--foreground);
   --meter-track: oklch(1 0 0 / 12%);
 }
@@ -209,4 +258,87 @@
 /* Lights a row of dots one after another. Browsers without sibling-index() light them together. */
 @utility delay-stagger {
   transition-delay: calc((sibling-index() - 1) * 14ms);
+}
+
+/*
+ * The tone of the reading on show, as two colours the page fades between.
+ * Registered as colours so a change of tone is a transition, not a cut.
+ */
+@property --tone-now {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #c3cbe0;
+}
+@property --tone-now-2 {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #6f8cff;
+}
+@layer components {
+  .tone-scope {
+    --tone-now: var(--tone-neutral);
+    --tone-now-2: var(--tone-neutral-2);
+    transition:
+      --tone-now 1.2s ease,
+      --tone-now-2 1.6s ease;
+  }
+  .tone-scope[data-tone="positive"] {
+    --tone-now: var(--tone-positive);
+    --tone-now-2: var(--tone-positive-2);
+  }
+  .tone-scope[data-tone="sad"] {
+    --tone-now: var(--tone-sad);
+    --tone-now-2: var(--tone-sad-2);
+  }
+  .tone-scope[data-tone="frustrated"] {
+    --tone-now: var(--tone-frustrated);
+    --tone-now-2: var(--tone-frustrated-2);
+  }
+}
+/* The page's backdrop: a faint grid of dots, and two soft glows in the tone's colours. */
+@utility backdrop-dots {
+  background-image: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--foreground) 6%, transparent) 1px,
+    transparent 1.4px
+  );
+  background-size: 14px 14px;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 45%);
+}
+@utility backdrop-glow {
+  left: -10%;
+  top: -20%;
+  width: 90%;
+  height: 140%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--tone-now) 14%, transparent),
+    transparent
+  );
+}
+@utility backdrop-glow-2 {
+  right: -20%;
+  bottom: -40%;
+  width: 80%;
+  height: 110%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--tone-now-2) 8%, transparent),
+    transparent
+  );
+}
+/* A lit dot's halo, and the brighter one of the dot a meter has reached. Both take the text colour. */
+@utility dot-lit {
+  box-shadow: 0 0 9px color-mix(in oklab, currentColor 70%, transparent);
+}
+@utility dot-head {
+  box-shadow:
+    0 0 12px var(--foreground),
+    0 0 22px currentColor;
+}
+/* The glow behind the tone's name. */
+@utility text-glow {
+  text-shadow:
+    0 0 18px color-mix(in oklab, currentColor 70%, transparent),
+    0 0 70px color-mix(in oklab, currentColor 40%, transparent);
 }

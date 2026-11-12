@@ -2,6 +2,7 @@ import { RTVIEvent } from "@pipecat-ai/client-js";
 import { useRTVIClientEvent } from "@pipecat-ai/client-react";
 import { useRef } from "react";
 
+import { ClipRing } from "@/components/pill/clip-ring";
 import type { Mood } from "@/components/pill/webgl-pill/mood";
 import type { MotionMode } from "@/components/pill/webgl-pill/motion";
 import { Pill, type PillHandle } from "@/components/pill/webgl-pill/Pill";
@@ -18,12 +19,19 @@ import { isServerMessage } from "@/types/perception";
 const LABEL = "Voice indicator";
 const UNSUPPORTED = "This browser can't draw the pill.";
 
-/**
- * The pill is drawn on a canvas that reaches past its place on the page, so
- * its glow has room to fade out: this is how much of that canvas the pill
- * itself takes, which leaves it as large as its place.
- */
-const PILL_SETTINGS = { fill: 0.56 };
+/** How the pill is set up for this page. */
+const PILL_SETTINGS = {
+  // The pill is drawn on a canvas that reaches past its place on the page, so
+  // its glow has room to fade out: this is how much of that canvas the pill
+  // itself takes, which leaves it as large as its place.
+  fill: 0.56,
+  // Idle, it goes on turning slowly and never comes to rest, so a spin winds
+  // down into that turn instead of snapping home.
+  idleTurnSeconds: 20,
+  restAfter: Number.POSITIVE_INFINITY,
+  // The pointer only nudges it.
+  pointerTilt: 5,
+};
 
 /** How the pill carries itself through a turn: it turns over while a session or a reading is on its way. */
 const MOTION: Record<SessionStatus, MotionMode> = {
@@ -67,6 +75,7 @@ export function VoicePill({ className }: VoicePillProps) {
 
   return (
     <div className={cn("relative shrink-0", className)}>
+      <ClipRing />
       {/* Larger than its place, and faded out towards its edge, so the glow
           is never cut off square. The pill sets its own box to fill this one. */}
       <div className="absolute -inset-1/5 mask-radial-from-70% mask-radial-to-100% mask-radial-closest-side">

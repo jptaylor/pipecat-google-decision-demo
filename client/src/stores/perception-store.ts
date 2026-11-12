@@ -11,6 +11,8 @@ import {
 export type Phase = "idle" | "hearing" | "reading";
 
 export interface Reading {
+  /** Counts up with each reading, so the page can tell a new one from the last. */
+  id: number;
   signals: SignalReading[];
   readMs: number;
   audioSecs: number;
@@ -21,10 +23,14 @@ interface PerceptionState {
   phase: Phase;
   /** The clip being played, if any. */
   activeClipId: string | null;
-  /** The clip played last, which Play plays again. */
+  /** The clip played last, which a random pick leaves out. */
   lastClipId: string | null;
+  /** How many clips have been started, so each one's progress ring starts afresh. */
+  clipCount: number;
   /** Where the turn on show came from: a clip's id, null for the microphone, undefined before any turn. */
   turnClipId: string | null | undefined;
+  /** How many readings there have been. */
+  readingCount: number;
   /** What the model made of the turn on show, once it has answered. */
   reading: Reading | null;
   /** Whether the latest read came to nothing. */
@@ -51,7 +57,11 @@ function apply(
         },
       };
     case "clip-started":
-      return { activeClipId: message.clipId, lastClipId: message.clipId };
+      return {
+        activeClipId: message.clipId,
+        lastClipId: message.clipId,
+        clipCount: state.clipCount + 1,
+      };
     case "clip-finished":
       return state.activeClipId === message.clipId
         ? { activeClipId: null }
@@ -70,10 +80,12 @@ function apply(
       return {
         turnClipId: message.clipId,
         reading: {
+          id: state.readingCount + 1,
           signals: message.signals,
           readMs: message.readMs,
           audioSecs: message.audioSecs,
         },
+        readingCount: state.readingCount + 1,
         // Speech that started while this was being read is still being heard.
         phase: state.phase === "hearing" ? "hearing" : "idle",
       };
@@ -90,6 +102,8 @@ export const usePerceptionStore = create<PerceptionState>()((set) => ({
   phase: "idle",
   activeClipId: null,
   lastClipId: null,
+  clipCount: 0,
+  readingCount: 0,
   turnClipId: undefined,
   reading: null,
   hasFailed: false,

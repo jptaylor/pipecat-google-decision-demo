@@ -116,6 +116,12 @@ export const defaultSettings = {
   listenPunch: 0.42,
   /** one turn while spinning */
   spinSeconds: 1.5,
+  /**
+   * One slow turn while idle, in seconds; 0 to hold its place and look about
+   * instead. A spin that ends then slows into this turn rather than coming
+   * round to face front.
+   */
+  idleTurnSeconds: 0,
   /** the single turn it makes as the mood changes */
   turnSeconds: 1.3,
   /** seconds with nothing happening before it comes to rest */
