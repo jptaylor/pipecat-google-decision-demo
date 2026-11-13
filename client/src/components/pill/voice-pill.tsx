@@ -1,6 +1,4 @@
-import { RTVIEvent } from "@pipecat-ai/client-js";
-import { useRTVIClientEvent } from "@pipecat-ai/client-react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { ClipRing } from "@/components/pill/clip-ring";
 import type { Mood } from "@/components/pill/webgl-pill/mood";
@@ -14,7 +12,6 @@ import {
 } from "@/hooks/use-session-status";
 import { cn } from "@/lib/utils";
 import { usePerceptionStore } from "@/stores/perception-store";
-import { isServerMessage } from "@/types/perception";
 
 const LABEL = "Voice indicator";
 const UNSUPPORTED = "This browser can't draw the pill.";
@@ -64,11 +61,14 @@ export function VoicePill({ className }: VoicePillProps) {
   const tone = useSceneTone();
   const voice = useHeardVoice();
 
-  useRTVIClientEvent(RTVIEvent.ServerMessage, (data: unknown) => {
-    if (isServerMessage(data) && data.type === "reading") {
+  const readingId = usePerceptionStore((state) => state.reading?.id);
+
+  // The pill is drawn outside React, so a new reading is passed on to it here.
+  useEffect(() => {
+    if (readingId !== undefined) {
       pill.current?.pulse();
     }
-  });
+  }, [readingId]);
 
   // Zinc at rest and for a neutral reading, violet while a turn is heard and read, then the tone's own.
   const mood: Mood = tone === "listening" ? "violet" : tone;

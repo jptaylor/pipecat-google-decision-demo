@@ -4,15 +4,14 @@ import { usePerceptionStore } from "@/stores/perception-store";
 
 const MICROPHONE = "Microphone";
 const CLIP = "Clip";
-const AUDIO_SUFFIX = "s of audio";
 
-/** What the turn on show is, a clip by how it was said and who says it or the microphone, and how much of it the model heard. */
+/** What the turn on show is, a clip by how it was said and who says it or the microphone, and the words heard in it. */
 export function TurnCaption() {
-  const { clips, turnClipId, audioSecs } = usePerceptionStore(
+  const { clips, turnClipId, words } = usePerceptionStore(
     useShallow((state) => ({
       clips: state.session?.clips,
       turnClipId: state.turnClipId,
-      audioSecs: state.reading?.audioSecs,
+      words: state.reading?.text,
     })),
   );
   const clip = clips?.find((candidate) => candidate.id === turnClipId);
@@ -25,12 +24,10 @@ export function TurnCaption() {
 
   return (
     <p className="flex min-h-4 justify-between gap-6 text-xs font-medium tracking-widest text-muted-foreground uppercase">
-      <span className="truncate">{source}</span>
-      {audioSecs === undefined ? null : (
-        <span className="shrink-0">
-          {audioSecs.toFixed(1)} {AUDIO_SUFFIX}
-        </span>
-      )}
+      <span className="truncate sm:shrink-0">{source}</span>
+      {words ? (
+        <span className="hidden truncate sm:block">&ldquo;{words}&rdquo;</span>
+      ) : null}
     </p>
   );
 }

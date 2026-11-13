@@ -24,10 +24,11 @@ logger.disable("pipecat")
 
 
 class Collector(FrameProcessor):
-    """Keeps every frame that reaches the end of the pipeline, but the ones that start and end it."""
+    """Keeps every frame that reaches it going one way, but the ones that start and end the pipeline."""
 
-    def __init__(self):
+    def __init__(self, direction: FrameDirection = FrameDirection.DOWNSTREAM):
         super().__init__()
+        self._direction = direction
         self.frames: list[Frame] = []
         self.started = asyncio.Event()
         self._arrived = asyncio.Condition()
@@ -36,7 +37,7 @@ class Collector(FrameProcessor):
         await super().process_frame(frame, direction)
         if isinstance(frame, StartFrame):
             self.started.set()
-        elif direction == FrameDirection.DOWNSTREAM and not isinstance(frame, (EndFrame, CancelFrame)):
+        elif direction == self._direction and not isinstance(frame, (EndFrame, CancelFrame)):
             async with self._arrived:
                 self.frames.append(frame)
                 self._arrived.notify_all()
@@ -54,11 +55,12 @@ class Collector(FrameProcessor):
 
 
 class Running:
-    """A running pipeline: what to send into it, and what came out."""
+    """A running pipeline: what to send into it, what came out, and the errors that went back up it."""
 
-    def __init__(self, worker: PipelineWorker, out: Collector):
+    def __init__(self, worker: PipelineWorker, out: Collector, errors: Collector):
         self._worker = worker
         self.out = out
+        self.errors = errors
 
     async def send(self, frame: Frame):
         await self._worker.queue_frame(frame)
@@ -68,8 +70,9 @@ class Running:
 async def running(*processors: FrameProcessor) -> AsyncIterator[Running]:
     """Run the processors as a pipeline until the block is left."""
     out = Collector()
+    errors = Collector(FrameDirection.UPSTREAM)
     worker = PipelineWorker(
-        Pipeline([*processors, out]),
+        Pipeline([errors, *processors, out]),
         params=PipelineParams(audio_in_sample_rate=SAMPLE_RATE, audio_out_sample_rate=SAMPLE_RATE),
         enable_rtvi=False,
         idle_timeout_secs=None,
@@ -79,7 +82,7 @@ async def running(*processors: FrameProcessor) -> AsyncIterator[Running]:
     run = asyncio.create_task(runner.run())
     await asyncio.wait_for(out.started.wait(), 5.0)
     try:
-        yield Running(worker, out)
+        yield Running(worker, out, errors)
     finally:
         await runner.cancel()
         await run

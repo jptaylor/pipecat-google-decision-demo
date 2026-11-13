@@ -1,4 +1,9 @@
-/** The demo's own messages from the bot, sent as RTVI server messages (see server/reporter.py). */
+/**
+ * The demo's own messages from the bot, sent as RTVI server messages: the
+ * session and its clips (server/bot.py, server/clips.py). The turns, their
+ * words, their readings and how long a read took all come from Pipecat's own
+ * RTVI events.
+ */
 
 export interface ClipInfo {
   id: string;
@@ -16,38 +21,15 @@ export interface Session {
   maxSecs: number;
 }
 
-export interface LabelConfidence {
-  label: string;
-  confidence: number;
-}
-
-/** One signal of a reading: a choice's labels, likeliest first, or a value. */
-export type SignalReading =
-  { name: string; labels: LabelConfidence[] } | { name: string; value: number };
-
 export type ServerMessage =
   | ({ type: "session" } & Session)
   | { type: "clip-started"; clipId: string }
-  | { type: "clip-finished"; clipId: string; completed: boolean }
-  | { type: "speech-started"; clipId: string | null }
-  | { type: "speech-stopped"; clipId: string | null }
-  | {
-      type: "reading";
-      clipId: string | null;
-      signals: SignalReading[];
-      readMs: number;
-      audioSecs: number;
-    }
-  | { type: "reading-failed"; clipId: string | null; reason: string };
+  | { type: "clip-finished"; clipId: string; completed: boolean };
 
 const MESSAGE_TYPES: ReadonlySet<string> = new Set<ServerMessage["type"]>([
   "session",
   "clip-started",
   "clip-finished",
-  "speech-started",
-  "speech-stopped",
-  "reading",
-  "reading-failed",
 ]);
 
 /** Whether a server message is one of the demo's. The bot is the only sender, so its shape is taken on trust. */

@@ -1,7 +1,8 @@
 # Voice perception demo (Google Decisions)
 
 A hosted, listen-only demo: play a premade clip or open the microphone, and see what Google's Decisions API
-(`gemini-decision-1`) hears in the voice, turn by turn. There is no speech-to-text, LLM or TTS.
+(`gemini-decision-1`) hears in the voice, turn by turn. Deepgram transcribes the words. There is no LLM
+or TTS.
 
 - `server/`: the Pipecat bot (Pipecat 1.16), deployed to Pipecat Cloud.
 - `client/`: the page (Vite, React 19, Tailwind 4, shadcn, Zustand), with the glass pill's source in it.
@@ -10,22 +11,39 @@ A hosted, listen-only demo: play a premade clip or open the microphone, and see 
 ## How it works
 
 ```
-transport input -> ClipPlayer -> Silero VAD -> PerceptionReader (Google) -> PerceptionReporter -> transport output
+transport input -> ClipPlayer -> VAD -> user turns -> Deepgram STT -> PerceptionReader (Google) -> transport output
 ```
 
-Each time the VAD says the speech stopped, the reader sends that stretch of audio to Google with five
-questions (`server/perception.py`): `tone`, `arousal`, `laughter`, `speech_rate` and `sarcasm`. The reporter
-tells the page what came back and how long the read took, as RTVI server messages (listed in
-`server/reporter.py`).
+It is a standard Pipecat 1.16 pipeline (`server/bot.py`). Deepgram transcribes the speech. Each time the
+VAD says the speech stopped, the `PerceptionReader` has Google hear that stretch of audio and answer five
+questions (`server/perception.py`): `tone`, `arousal`, `laughter`, `speech_rate` and `sarcasm`. The reader
+sets the answers as the transcription's `perception`.
 
-A clip is played into the pipeline just after the transport's input, in real time, so it takes the same road
-as the microphone. The same audio is sent out through the transport, so the visitor hears the clip as the
-model does. The microphone isn't heard while a clip plays.
+The page learns all of that from Pipecat's own RTVI events, with no reporting code in the bot:
 
-The page has two controls. **Play** plays the next clip (the bot goes round its list), and stops it if pressed
-again. **Mic** opens the microphone. Either one starts a session first if there isn't one. The pill follows the
-turn: its light moves with the voice, it turns over while the model reads, and it takes the colour of the tone
-the model heard.
+- `user-started-speaking` and `user-stopped-speaking`: the turn, which starts and stops with the VAD.
+- `user-input`: the turn's words and, on the final transcription, its `perception`.
+- `metrics`: how long the read took, as the classifier's processing time.
+
+Two things about the order matter. The reader directly follows the STT, because RTVI sends a
+transcription on once the reader that follows its STT has read it. And the turns are decided before the
+STT, so a turn ends when its speech does, and the page can show the read in progress until the reading
+arrives.
+
+The one custom processor is the `ClipPlayer` (`server/clips.py`). It plays a clip into the pipeline just
+after the transport's input, in real time, as the user's audio, so a clip takes the same road as the
+microphone. The same audio is sent out through the transport, so the visitor hears it. The microphone
+isn't heard while a clip plays. The player tells the page when a clip starts and finishes, and the bot
+sends one `session` message with the model and the clips: those three RTVI server messages are the
+demo's own.
+
+The page has two main controls. **Play** runs through the clips in order, and stops if pressed again.
+**Mic** opens the microphone. Either one starts a session first if there isn't one. The pill follows the
+turn: its light moves with the voice, it turns over while the model reads, and it takes the colour of the
+tone the model heard.
+
+A reading rides on a transcription, so speech with no words in it, such as laughter alone, shows no
+reading.
 
 ## Run it locally
 
@@ -39,7 +57,8 @@ python prepare_clips.py /path/to/moods
 
 Without them the bot still runs, with the microphone alone.
 
-Then the bot, which needs `GOOGLE_API_KEY` (in `server/.env`; see `server/env.example`):
+Then the bot, which needs `GOOGLE_API_KEY` and `DEEPGRAM_API_KEY` (in `server/.env`; see
+`server/env.example`):
 
 ```bash
 cd server && uv sync && uv run bot.py
@@ -72,7 +91,7 @@ CLI). Run `prepare_clips.py` first: the image is built from the folder as it is,
 
 ```bash
 pipecat cloud auth login
-pipecat cloud secrets set google-perception-demo-secrets GOOGLE_API_KEY=...
+pipecat cloud secrets set google-perception-demo-secrets GOOGLE_API_KEY=... DEEPGRAM_API_KEY=...
 pipecat cloud deploy
 ```
 

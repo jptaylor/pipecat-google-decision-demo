@@ -23,7 +23,7 @@ const STATUS_TEXT: Record<SessionStatus, string> = {
 /** The page's name, what is happening right now, how long the last read took and the model asked. */
 export function AppHeader() {
   const status = useSessionStatus();
-  const readMs = usePerceptionStore((state) => state.reading?.readMs);
+  const readMs = usePerceptionStore((state) => state.readMs);
   const model = usePerceptionStore((state) => state.session?.model);
   const isWorking =
     status === "connecting" || status === "hearing" || status === "reading";
@@ -54,7 +54,7 @@ export function AppHeader() {
           />
           {STATUS_TEXT[status]}
         </p>
-        {readMs === undefined ? null : (
+        {readMs === null ? null : (
           <span className="hidden sm:inline">
             {LATENCY}{" "}
             <span className="text-foreground">{Math.round(readMs)}</span>{" "}

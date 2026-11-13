@@ -1,23 +1,26 @@
-"""The demo's premade clips, and the processor that plays one into the pipeline as if the user had said it.
+"""The demo's premade clips, and the processor that plays one into the pipeline as the user's audio.
 
-A clip goes in just after the transport's input, 20 ms at a time in real time, so the VAD finds its speech and
-the reader hears it exactly as it would a caller's. The same audio goes out through the transport, so the visitor
-hears the clip as the model does. The microphone isn't heard while a clip plays.
+A clip goes in just after the transport's input, 20 ms at a time in real time, so everything after it (the
+VAD, the STT, the perception reader) treats it exactly as it would a caller's voice. The same audio goes
+out through the transport, so the visitor hears the clip too. The microphone isn't heard while a clip plays.
 """
 
 from __future__ import annotations
 
 import asyncio
+import itertools
 import json
 import wave
+from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 from typing import Any
 
 from loguru import logger
-from pipecat.frames.frames import Frame, InputAudioRawFrame, OutputAudioRawFrame, SystemFrame
+from pipecat.frames.frames import Frame, InputAudioRawFrame, OutputAudioRawFrame
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+from pipecat.processors.frameworks.rtvi import RTVIServerMessageFrame
 
 SAMPLE_RATE = 16000
 CLIPS_DIR = Path(__file__).resolve().parent / "clips"
@@ -99,48 +102,30 @@ def _read_wav(path: Path) -> bytes:
         return wav.readframes(wav.getnframes())
 
 
-@dataclass
-class ClipStartedFrame(SystemFrame):
-    """A clip has started playing into the pipeline.
-
-    Parameters:
-        clip: The clip.
-    """
-
-    clip: Clip
-
-
-@dataclass
-class ClipFinishedFrame(SystemFrame):
-    """A clip is over, with the silence after it: what's heard next is the microphone.
-
-    Parameters:
-        clip: The clip.
-        completed: Whether it played to its end, rather than being stopped.
-    """
-
-    clip: Clip
-    completed: bool
-
-
 class ClipPlayer(FrameProcessor):
-    """Plays a clip into the pipeline as the user's audio, and out through the transport to be heard.
+    """Plays a premade clip into the pipeline as the user's audio, and out through the transport to be heard.
 
     Goes right after the transport's input. While a clip plays, the microphone's audio is dropped and the
-    clip's takes its place, followed by enough silence for the VAD to find the end of its speech. A
-    ``ClipStartedFrame`` goes downstream before the clip's first audio and a ``ClipFinishedFrame`` after that
-    silence. One clip plays at a time: playing another stops the one playing first.
+    clip's takes its place, followed by enough silence for the VAD to find the end of its speech. One clip
+    plays at a time: playing another stops the one playing first.
+
+    The page is told with two RTVI server messages: ``{"type": "clip-started", "clipId": ...}`` before a
+    clip's first audio, and ``{"type": "clip-finished", "clipId": ..., "completed": ...}`` after its
+    silence, where ``completed`` says whether it played to its end rather than being stopped.
     """
 
-    def __init__(self, *, silence_secs: float, **kwargs):
+    def __init__(self, clips: Mapping[str, Clip], *, silence_secs: float, **kwargs):
         """Initialize the player.
 
         Args:
+            clips: The clips it can play, by id, in the order they're played when none is named.
             silence_secs: Seconds of silence played after a clip, longer than the VAD waits before it
                 says the speech stopped.
             **kwargs: Additional arguments passed to the parent.
         """
         super().__init__(**kwargs)
+        self._clips = dict(clips)
+        self._up_next = itertools.cycle(self._clips.values())
         self._silence = bytes(_CHUNK_BYTES) * round(silence_secs / _CHUNK_SECS)
         self._playing: asyncio.Task | None = None
         # Set to stop the latest clip asked for. Each clip has its own, so stopping one that waits its
@@ -148,15 +133,31 @@ class ClipPlayer(FrameProcessor):
         self._stop = asyncio.Event()
 
     @property
+    def clips(self) -> list[Clip]:
+        """The clips it can play, in order."""
+        return list(self._clips.values())
+
+    @property
     def playing(self) -> bool:
         """Whether a clip, or the silence after it, is being played."""
         return self._playing is not None and not self._playing.done()
 
-    async def play(self, clip: Clip):
-        """Play a clip, once any clip already playing has been stopped and its silence played."""
+    async def play(self, clip_id: str | None = None) -> bool:
+        """Play a clip, once any clip already playing has been stopped and its silence played.
+
+        Args:
+            clip_id: The clip to play. With none, the next one, round and round.
+
+        Returns:
+            Whether there is such a clip.
+        """
+        clip = self._clips.get(clip_id) if clip_id else next(self._up_next, None)
+        if clip is None:
+            return False
         self.stop()
         self._stop = asyncio.Event()
         self._playing = self.create_task(self._play(clip, self._stop, after=self._playing))
+        return True
 
     def stop(self):
         """Stop the clip playing, if any. Its silence is still played, so the VAD ends its speech."""
@@ -180,10 +181,10 @@ class ClipPlayer(FrameProcessor):
             await asyncio.wait({after})
         if stop.is_set():
             return  # stopped while it waited its turn: none of it was heard
-        await self.push_frame(ClipStartedFrame(clip=clip))
+        await self._tell("clip-started", clipId=clip.id)
         completed = await self._feed(clip.audio, stop)
         await self._feed(self._silence)
-        await self.push_frame(ClipFinishedFrame(clip=clip, completed=completed))
+        await self._tell("clip-finished", clipId=clip.id, completed=completed)
 
     async def _feed(self, audio: bytes, stop: asyncio.Event | None = None) -> bool:
         """Push audio in as the user's, in real time. Returns False if it was stopped before its end.
@@ -205,3 +206,6 @@ class ClipPlayer(FrameProcessor):
             # Paced against the audio's start, so the sleeps' overshoot doesn't add up.
             await asyncio.sleep(max(0.0, started + (index + 1) * _CHUNK_SECS - loop.time()))
         return True
+
+    async def _tell(self, kind: str, **fields: Any):
+        await self.push_frame(RTVIServerMessageFrame(data={"type": kind, **fields}))

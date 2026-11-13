@@ -1,10 +1,16 @@
-import type { LabelConfidence, SignalReading } from "@/types/perception";
+import type {
+  UserPerceptionLabel,
+  UserPerceptionSignal,
+} from "@pipecat-ai/client-js";
 
 /**
  * The signals the page lays out, by the names the bot asks for them under
  * (server/perception.py). A change to the bot's questions is a change here.
  */
 const TONE_SIGNAL = "tone";
+
+/** The classifier the bot's reader asks, as its metrics name it (server/bot.py). */
+export const READER_PROCESSOR = "GoogleDecisionsClassifier";
 
 /** The tones the model chooses between, in the order their bars are drawn. */
 export const TONES = ["positive", "neutral", "sad", "frustrated"] as const;
@@ -34,19 +40,20 @@ export function isTone(label: string | undefined): label is Tone {
 
 /** How likely each tone is in a reading, likeliest first, or undefined if it has none. */
 export function tonesOf(
-  signals: SignalReading[] | undefined,
-): LabelConfidence[] | undefined {
+  signals: UserPerceptionSignal[] | undefined,
+): UserPerceptionLabel[] | undefined {
   const tone = signals?.find((signal) => signal.name === TONE_SIGNAL);
-  return tone && "labels" in tone ? tone.labels : undefined;
+  return tone?.labels.length ? tone.labels : undefined;
 }
 
 /** A measured signal's value in a reading, or undefined if it has none. */
 export function valueOf(
-  signals: SignalReading[] | undefined,
+  signals: UserPerceptionSignal[] | undefined,
   name: string,
 ): number | undefined {
-  const signal = signals?.find((candidate) => candidate.name === name);
-  return signal && "value" in signal ? signal.value : undefined;
+  return (
+    signals?.find((candidate) => candidate.name === name)?.value ?? undefined
+  );
 }
 
 /** A value as the page shows it: its figure, its unit, and how much of its bar it fills. */

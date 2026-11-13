@@ -1,6 +1,7 @@
+import type { UserPerceptionLabel } from "@pipecat-ai/client-js";
+
 import { percent, type Tone, TONES } from "@/lib/perception";
 import { cn } from "@/lib/utils";
-import type { LabelConfidence } from "@/types/perception";
 
 const TITLE = "Tone";
 const EMPTY = "--";
@@ -36,7 +37,7 @@ const GRID = Array.from({ length: DOTS }, (_, drawn) => {
 
 interface TonePanelsProps {
   /** How likely each tone is, likeliest first, or undefined when there is no reading. */
-  tones: LabelConfidence[] | undefined;
+  tones: UserPerceptionLabel[] | undefined;
 }
 
 /** A panel a tone: how likely the model made it, as a figure and a grid of dots that fills from the bottom. */

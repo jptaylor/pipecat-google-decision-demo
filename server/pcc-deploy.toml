@@ -1,5 +1,5 @@
 agent_name = "google-perception-demo"
-# Holds GOOGLE_API_KEY (and SESSION_MAX_SECS, to change the session limit).
+# Holds GOOGLE_API_KEY and DEEPGRAM_API_KEY (and SESSION_MAX_SECS, to change the session limit).
 secret_set = "google-perception-demo-secrets"
 agent_profile = "agent-1x"
 

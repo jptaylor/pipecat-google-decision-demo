@@ -1,26 +1,35 @@
+import type {
+  PipecatMetricsData,
+  UserInputData,
+  UserPerceptionSignal,
+} from "@pipecat-ai/client-js";
 import { create } from "zustand";
 
+import { READER_PROCESSOR } from "@/lib/perception";
 import {
   isServerMessage,
   type ServerMessage,
   type Session,
-  type SignalReading,
 } from "@/types/perception";
 
-/** What the pipeline is doing with the audio it hears. */
+/** What the pipeline is doing with the audio it hears: nothing, hearing a turn, or reading the turn just heard. */
 export type Phase = "idle" | "hearing" | "reading";
 
 export interface Reading {
   /** Counts up with each reading, so the page can tell a new one from the last. */
   id: number;
-  signals: SignalReading[];
-  readMs: number;
-  audioSecs: number;
+  /** The turn it is a reading of, by its number. */
+  turn: number;
+  signals: UserPerceptionSignal[];
+  /** The turn's words, as transcribed. */
+  text: string;
 }
 
 interface PerceptionState {
   session: Session | null;
   phase: Phase;
+  /** How many turns the user has started. */
+  turn: number;
   /** The clip being played, if any. */
   activeClipId: string | null;
   /** The clip played last, which the next one follows. */
@@ -35,12 +44,25 @@ interface PerceptionState {
   readingCount: number;
   /** What the model made of the turn on show, once it has answered. */
   reading: Reading | null;
-  /** Whether the latest read came to nothing. */
+  /** How long the model took over its latest read, in milliseconds. */
+  readMs: number | null;
+  /** Whether the latest turn came to no reading. */
   hasFailed: boolean;
   /** Why a session couldn't be started. */
   connectionError: string | null;
 
+  /** One of the demo's own messages arrived. */
   receive: (data: unknown) => void;
+  /** The user, or a clip in their place, started speaking. */
+  turnStarted: () => void;
+  /** They stopped: the turn is being read. */
+  turnStopped: () => void;
+  /** Words of the user's arrived, the final ones with how they were said. */
+  heard: (input: UserInputData) => void;
+  /** The bot reported how long its services took. */
+  measured: (metrics: PipecatMetricsData) => void;
+  /** A turn's reading never came. */
+  readingTimedOut: () => void;
   setCycling: (isCycling: boolean) => void;
   setConnectionError: (error: string | null) => void;
   sessionEnded: () => void;
@@ -69,40 +91,45 @@ function apply(
       return state.activeClipId === message.clipId
         ? { activeClipId: null }
         : {};
-    case "speech-started":
-      // A new turn: the last one's reading makes way for it.
-      return {
-        phase: "hearing",
-        turnClipId: message.clipId,
-        reading: null,
-        hasFailed: false,
-      };
-    case "speech-stopped":
-      return { phase: "reading" };
-    case "reading":
-      return {
-        turnClipId: message.clipId,
-        reading: {
-          id: state.readingCount + 1,
-          signals: message.signals,
-          readMs: message.readMs,
-          audioSecs: message.audioSecs,
-        },
-        readingCount: state.readingCount + 1,
-        // Speech that started while this was being read is still being heard.
-        phase: state.phase === "hearing" ? "hearing" : "idle",
-      };
-    case "reading-failed":
-      return {
-        hasFailed: true,
-        phase: state.phase === "hearing" ? "hearing" : "idle",
-      };
   }
+}
+
+/** A final transcription: the turn's reading, or more words of a turn already read. */
+function hear(
+  state: PerceptionState,
+  input: UserInputData,
+): Partial<PerceptionState> {
+  // Speech that started while this was being read is still being heard, and
+  // this is a reading of the turn before it.
+  const turn = state.phase === "hearing" ? state.turn - 1 : state.turn;
+  const phase = state.phase === "hearing" ? "hearing" : "idle";
+  const signals = input.perception;
+  if (!signals?.length) {
+    // Words that came with no reading: the model didn't answer in time, or failed.
+    return state.reading?.turn === turn ? {} : { hasFailed: true, phase };
+  }
+  if (state.reading?.turn === turn) {
+    // A long turn is transcribed in parts, each carrying the turn's one reading.
+    const text = `${state.reading.text} ${input.text}`.trim();
+    return { reading: { ...state.reading, signals, text } };
+  }
+  return {
+    reading: {
+      id: state.readingCount + 1,
+      turn,
+      signals,
+      text: input.text.trim(),
+    },
+    readingCount: state.readingCount + 1,
+    hasFailed: false,
+    phase,
+  };
 }
 
 export const usePerceptionStore = create<PerceptionState>()((set) => ({
   session: null,
   phase: "idle",
+  turn: 0,
   activeClipId: null,
   lastClipId: null,
   clipCount: 0,
@@ -110,6 +137,7 @@ export const usePerceptionStore = create<PerceptionState>()((set) => ({
   readingCount: 0,
   turnClipId: undefined,
   reading: null,
+  readMs: null,
   hasFailed: false,
   connectionError: null,
 
@@ -118,6 +146,35 @@ export const usePerceptionStore = create<PerceptionState>()((set) => ({
       set((state) => apply(state, data));
     }
   },
+  // A new turn: the last one's reading makes way for it.
+  turnStarted: () =>
+    set((state) => ({
+      phase: "hearing",
+      turn: state.turn + 1,
+      turnClipId: state.activeClipId,
+      reading: null,
+      hasFailed: false,
+    })),
+  turnStopped: () =>
+    set((state) => (state.phase === "hearing" ? { phase: "reading" } : {})),
+  heard: (input) => {
+    if (input.input_type === "transcription" && input.final) {
+      set((state) => hear(state, input));
+    }
+  },
+  measured: (metrics) => {
+    // The classifier's processing time is how long its read took. Other services report theirs too.
+    const read = metrics.processing?.find((metric) =>
+      metric.processor.startsWith(READER_PROCESSOR),
+    );
+    if (read) {
+      set({ readMs: read.value * 1000 });
+    }
+  },
+  readingTimedOut: () =>
+    set((state) =>
+      state.phase === "reading" ? { phase: "idle", hasFailed: true } : {},
+    ),
   setCycling: (isCycling) => set({ isCycling }),
   setConnectionError: (connectionError) => set({ connectionError }),
   // The last reading stays on the page after a session ends; only what was live is cleared.

@@ -12,6 +12,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --locked --no-install-project --no-dev
 
-COPY ./bot.py ./clips.py ./perception.py ./reporter.py ./
+COPY ./bot.py ./clips.py ./perception.py ./
 # The premade clips: put there by prepare_clips.py before the image is built.
 COPY ./clips ./clips

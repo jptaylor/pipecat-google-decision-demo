@@ -1,19 +1,26 @@
-"""Google Decisions perception demo: a listen-only Pipecat bot.
+"""Voice perception demo: a Pipecat bot that hears how each turn was said.
 
-    transport input -> ClipPlayer -> Silero VAD -> PerceptionReader (Google) -> PerceptionReporter -> transport output
+    transport input -> clips -> VAD -> user turns -> Deepgram STT -> PerceptionReader (Google) -> transport output
 
-The page plays a premade clip or opens its microphone. Each time the VAD says the speech stopped, the reader
-sends that stretch of audio to Google's Decisions API with the questions in ``perception.py``, and the reporter
-tells the page what came back and how long it took. There is no speech-to-text, LLM or TTS: the only thing
-the bot sends out is the clip being played, so the visitor hears what the model hears.
+The page plays a premade clip or opens its microphone. A clip enters the pipeline as the user's audio, so
+both take the same road. Deepgram transcribes the speech, and each time the user stops, the
+``PerceptionReader`` has Google's Decisions API hear that stretch of audio and answer the questions in
+``perception.py``. The reader sets the answers as the transcription's ``perception``.
 
-Messages from the page (RTVI client messages):
+There is no LLM or TTS, and nothing here reports to the page but the clip player: Pipecat's RTVI layer
+already tells a client everything else.
 
-- ``play-clip``: play the next premade clip into the pipeline, or the one named by ``{"clipId": ...}``.
+- ``user-started-speaking`` and ``user-stopped-speaking``: the user's turn.
+- ``user-input``: what was said and, on the final transcription, its ``perception``.
+- ``metrics``: how long each read took, as the classifier's processing time.
+
+The demo's own messages are the clips'. From the page (RTVI client messages):
+
+- ``play-clip``: play the next premade clip, or the one named by ``{"clipId": ...}``.
 - ``stop-clip``: stop the clip playing.
 
-Messages to the page are listed in ``reporter.py``, after one ``session`` message sent when the page is ready:
-the model asked and the clips it can play.
+To the page (RTVI server messages): ``session``, once the page is ready, with the model asked and the
+clips it can play, and the player's ``clip-started`` and ``clip-finished`` (see ``clips.py``).
 
 Run it locally with ``uv run bot.py`` (SmallWebRTC, no account needed) or ``uv run bot.py -t daily``.
 """
@@ -21,7 +28,6 @@ Run it locally with ``uv run bot.py`` (SmallWebRTC, no account needed) or ``uv r
 from __future__ import annotations
 
 import asyncio
-import itertools
 import os
 
 from dotenv import load_dotenv
@@ -29,21 +35,26 @@ from loguru import logger
 from pipecat.audio.filters.base_audio_filter import BaseAudioFilter
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.audio.vad.vad_analyzer import VADParams
-from pipecat.frames.frames import VADUserStartedSpeakingFrame
+from pipecat.classifiers.google.decisions.classifier import GoogleDecisionsClassifier
+from pipecat.expressive.processors.perception_reader import PerceptionReader, PerceptionSource
 from pipecat.pipeline.pipeline import Pipeline
-from pipecat.pipeline.worker import PipelineParams, PipelineWorker
+from pipecat.pipeline.worker import PipelineParams, PipelineWorker, ProcessorUnusablePolicy
 from pipecat.processors.audio.vad_processor import VADProcessor
 from pipecat.processors.frameworks.rtvi import RTVIProcessor
 from pipecat.processors.frameworks.rtvi.models import ClientMessage
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
+from pipecat.services.deepgram.stt import DeepgramSTTService
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
+from pipecat.turns.user_start import VADUserTurnStartStrategy
+from pipecat.turns.user_stop import SpeechTimeoutUserTurnStopStrategy
+from pipecat.turns.user_turn_processor import UserTurnProcessor
+from pipecat.turns.user_turn_strategies import UserTurnStrategies
 from pipecat.workers.runner import WorkerRunner
 
 from clips import SAMPLE_RATE, ClipPlayer, load_clips
-from perception import build_reader
-from reporter import PerceptionReporter
+from perception import QUESTIONS
 
 load_dotenv(override=True)
 
@@ -82,28 +93,56 @@ transport_params = {
 
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
-    clips = load_clips()
-    up_next = itertools.cycle(clips.values())
-    reader, classifier = build_reader(os.environ["GOOGLE_API_KEY"])
-    player = ClipPlayer(silence_secs=CLIP_SILENCE_SECS)
+    logger.info("Starting bot")
+
+    # The premade clips, played in as the user's audio.
+    clips = ClipPlayer(load_clips(), silence_secs=CLIP_SILENCE_SECS)
+
+    vad = VADProcessor(vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=VAD_STOP_SECS)))
+
+    stt = DeepgramSTTService(api_key=os.environ["DEEPGRAM_API_KEY"])
+
+    # Google's Decisions API hears each stretch of speech and answers the questions about the voice. The
+    # reader sets the answers as the transcription's perception, which reaches the page in RTVI's
+    # user-input message.
+    google = GoogleDecisionsClassifier(api_key=os.environ["GOOGLE_API_KEY"])
+    reader = PerceptionReader(sources=[PerceptionSource(classifier=google, questions=QUESTIONS)])
+
+    # A turn here is one stretch of speech, the same stretch the reader hears: it starts and stops with
+    # the VAD, without waiting for its words. It goes before the STT, so the page learns the speech is
+    # over before its reading arrives. Nothing speaks, so there is nothing for a turn to interrupt but
+    # the clip being played out.
+    user_turns = UserTurnProcessor(
+        user_turn_strategies=UserTurnStrategies(
+            start=[VADUserTurnStartStrategy(enable_interruptions=False)],
+            stop=[SpeechTimeoutUserTurnStopStrategy(user_speech_timeout=0, wait_for_transcript=False)],
+        )
+    )
 
     pipeline = Pipeline(
         [
-            transport.input(),
-            player,
-            VADProcessor(vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=VAD_STOP_SECS))),
-            reader,
-            PerceptionReporter(classifier),
-            transport.output(),
+            transport.input(),  # The microphone
+            clips,  # A premade clip, in the microphone's place
+            vad,
+            user_turns,
+            stt,
+            reader,  # How each turn was said, right after the STT whose transcriptions carry it
+            transport.output(),  # The clip being played, to be heard
         ]
     )
 
     worker = PipelineWorker(
         pipeline,
-        params=PipelineParams(audio_in_sample_rate=SAMPLE_RATE, audio_out_sample_rate=SAMPLE_RATE),
-        # Nothing here transcribes or speaks, so speech is what shows a session is in use.
-        idle_timeout_frames=(VADUserStartedSpeakingFrame,),
+        params=PipelineParams(
+            audio_in_sample_rate=SAMPLE_RATE,
+            audio_out_sample_rate=SAMPLE_RATE,
+            # The classifier's processing time is how long a read took.
+            enable_metrics=True,
+            enable_usage_metrics=True,
+        ),
         idle_timeout_secs=runner_args.pipeline_idle_timeout_secs,
+        # Without Google there is nothing to show.
+        processor_unusable_policy=ProcessorUnusablePolicy.END,
     )
 
     runner = WorkerRunner(handle_sigint=runner_args.handle_sigint)
@@ -114,8 +153,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         await rtvi.send_server_message(
             {
                 "type": "session",
-                "model": classifier.model,
-                "clips": [clip.describe() for clip in clips.values()],
+                "model": google.model,
+                "clips": [clip.describe() for clip in clips.clips],
                 "maxSecs": SESSION_MAX_SECS,
             }
         )
@@ -124,14 +163,10 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     async def on_client_message(rtvi: RTVIProcessor, message: ClientMessage):
         if message.type == "play-clip":
             clip_id = message.data.get("clipId") if isinstance(message.data, dict) else None
-            # With no clip named, each press of Play is the next one, round and round.
-            clip = clips.get(clip_id) if clip_id else next(up_next, None)
-            if clip:
-                await player.play(clip)
-            else:
+            if not await clips.play(clip_id):
                 await rtvi.send_error_response(message, "There is no such clip to play")
         elif message.type == "stop-clip":
-            player.stop()
+            clips.stop()
         else:
             await rtvi.send_error_response(message, f"Unknown message {message.type!r}")
 
